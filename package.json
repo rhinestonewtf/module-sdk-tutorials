@@ -1,0 +1,25 @@
+{
+  "name": "@rhinestone/module-sdk-tutorials",
+  "version": "0.0.1",
+  "description": "Tutorials using the Module SDK",
+  "author": {
+    "name": "Rhinestone",
+    "url": "https://rhinestone.wtf"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@rhinestone/module-sdk": "^0.1.17",
+    "jest": "^29.7.0",
+    "permissionless": "^0.2.3",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2",
+    "viem": "^2.21.16"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13"
+  }
+}
