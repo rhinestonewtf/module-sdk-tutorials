@@ -8,7 +8,10 @@
   },
   "license": "MIT",
   "scripts": {
-    "test": "jest"
+    "test": "jest --detectOpenHandles",
+    "test:e2e": "bun run docker:up && jest && bun run docker:down",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "dependencies": {
     "@rhinestone/module-sdk": "^0.1.17",

@@ -16,6 +16,7 @@ import {
   getSetOwnableValidatorThresholdAction,
   getSocialRecoveryValidator,
   getOwnableValidator,
+  getSocialRecoveryMockSignature,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -27,23 +28,28 @@ import {
   createPublicClient,
   http,
   encodePacked,
+  pad,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import {
+  createPaymasterClient,
   entryPoint07Address,
   getUserOperationHash,
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
+import { getAccountNonce } from "permissionless/actions";
 
 export default async function main({
   bundlerUrl,
   rpcUrl,
+  paymasterUrl,
   chain,
 }: {
   bundlerUrl: string;
   rpcUrl: string;
+  paymasterUrl: string;
   chain: any;
 }) {
   const publicClient = createPublicClient({
@@ -59,6 +65,10 @@ export default async function main({
     },
   });
 
+  const paymasterClient = createPaymasterClient({
+    transport: http(paymasterUrl),
+  });
+
   const owner = privateKeyToAccount(generatePrivateKey());
 
   const safeAccount = await toSafeSmartAccount({
@@ -69,15 +79,22 @@ export default async function main({
       address: entryPoint07Address,
       version: "0.7",
     },
+    // safe4337ModuleAddress: "0x7579F9feedf32331C645828139aFF78d517d0001",
+    // erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
     safe4337ModuleAddress: "0x3Fdb5BC686e861480ef99A6E3FaAe03c0b9F32e2", // These are not meant to be used in production as of now.
-    erc7579LaunchpadAddress: "0xEBe001b3D534B9B6E2500FB78E67a1A137f561CE", // These are not meant to be used in production as of now.
+    erc7579LaunchpadAddress: "0xEBe001b3D534B9B6E2500FB78E67a1A137f561CE",
+    attesters: [
+      "0x000000333034E9f539ce08819E12c1b8Cb29084d", // Rhinestone Attester
+      "0xA4C777199658a41688E9488c4EcbD7a2925Cc23A", // Mock Attester - do not use in production
+    ],
+    attestersThreshold: 1,
   });
 
   const smartAccountClient = createSmartAccountClient({
     account: safeAccount,
     chain: chain,
     bundlerTransport: http(bundlerUrl),
-    paymaster: pimlicoClient,
+    paymaster: paymasterClient,
     userOperation: {
       estimateFeesPerGas: async () => {
         return (await pimlicoClient.getUserOperationGasPrice()).fast;
@@ -93,10 +110,14 @@ export default async function main({
     threshold: 2,
   });
 
-  const opHash2 = await smartAccountClient.installModule({
+  const opHash1 = await smartAccountClient.installModule({
     type: ownableValidator.type,
     address: ownableValidator.module,
     context: ownableValidator.initData!,
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash1,
   });
 
   const module = getSocialRecoveryValidator({
@@ -111,10 +132,20 @@ export default async function main({
     threshold: 1,
   });
 
-  const opHash3 = await smartAccountClient.installModule({
+  const opHash2 = await smartAccountClient.installModule({
     type: module.type,
     address: module.module,
     context: module.initData!,
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash2,
+  });
+
+  const nonce = await getAccountNonce(publicClient, {
+    address: safeAccount.address,
+    entryPointAddress: entryPoint07Address,
+    key: BigInt(pad(module.module, { dir: "right", size: 24 }) || 0),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -126,6 +157,8 @@ export default async function main({
         value: action.value,
       },
     ],
+    nonce: nonce,
+    signature: getSocialRecoveryMockSignature(),
   });
 
   const userOpHashToSign = getUserOperationHash({
@@ -165,6 +198,7 @@ export default async function main({
         value: BigInt(0),
       },
     ],
+    nonce: nonce,
     signature: encodePacked(["bytes", "bytes"], [signature1, signature2]),
   });
 
