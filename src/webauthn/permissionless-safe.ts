@@ -1,37 +1,12 @@
 import {
-  getSmartSessionsValidator,
-  OWNABLE_VALIDATOR_ADDRESS,
-  getSudoPolicy,
-  Session,
-  getSessionDigest,
-  SMART_SESSIONS_ADDRESS,
-  hashChainSessions,
-  getClient,
-  getAccount,
-  getPermissionId,
-  getSessionNonce,
-  encodeSmartSessionSignature,
-  SmartSessionMode,
-  ChainSession,
-  getSocialRecoveryValidator,
   getWebAuthnValidator,
-  getWebauthnValidatorMockSignature,
   getWebauthnValidatorSignature,
   getTrustAttestersAction,
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  encodeAbiParameters,
-  toHex,
-  toBytes,
-  Address,
-  Hex,
-  createPublicClient,
-  http,
-  pad,
-} from "viem";
+import { createPublicClient, http, pad } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -42,7 +17,6 @@ import {
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
 import { getAccountNonce } from "permissionless/actions";
-import { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/typescript-types";
 import {
   b64ToBytes,
   base64FromUint8Array,
@@ -51,6 +25,16 @@ import {
   parseAndNormalizeSig,
   uint8ArrayToHexString,
 } from "./utils";
+import {
+  create,
+  get,
+  PublicKeyCredentialWithAttestationJSON,
+} from "@github/webauthn-json";
+import crypto from "crypto";
+
+function clean(str: string) {
+  return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
 
 export default async function main({
   bundlerUrl,
@@ -113,6 +97,33 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
+  const saltUUID = crypto.createHash("sha256").update("salt").digest("hex");
+
+  const _credential = await create({
+    publicKey: {
+      challenge: clean(crypto.randomBytes(32).toString("base64")),
+      rp: {
+        // Change these later
+        name: "Rhinestone",
+        id: "test",
+      },
+      user: {
+        id: saltUUID,
+        name: "rhinestone wallet",
+        displayName: "rhinestone wallet",
+      },
+      // Don't change these later
+      pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+      timeout: 60000,
+      attestation: "direct",
+      authenticatorSelection: {
+        residentKey: "required",
+        userVerification: "required",
+        authenticatorAttachment: "platform",
+      },
+    },
+  });
+
   const webauthn = getWebAuthnValidator({
     pubKeyX: 1,
     pubKeyY: 2,
@@ -163,25 +174,42 @@ export default async function main({
     userOperation,
   });
 
-  const formattedMessage = userOpHashToSign.startsWith("0x")
-    ? userOpHashToSign.slice(2)
-    : userOpHashToSign;
+  // const formattedMessage = userOpHashToSign.startsWith("0x")
+  //   ? userOpHashToSign.slice(2)
+  //   : userOpHashToSign;
 
-  const challenge = base64FromUint8Array(
-    hexStringToUint8Array(formattedMessage),
-    true
-  );
+  // const challenge = base64FromUint8Array(
+  //   hexStringToUint8Array(formattedMessage),
+  //   true
+  // );
 
-  // prepare assertion options
-  const assertionOptions: PublicKeyCredentialRequestOptionsJSON = {
-    challenge,
-    // allowCredentials,
-    userVerification: "required",
-  };
+  // // prepare assertion options
+  // const assertionOptions: PublicKeyCredentialWithAttestationJSON = {
+  //   challenge,
+  //   // allowCredentials,
+  //   userVerification: "required",
+  // };
 
-  const { startAuthentication } = await import("@simplewebauthn/browser");
-
-  const cred = await startAuthentication(assertionOptions);
+  const cred = await get({
+    publicKey: {
+      challenge: Buffer.from(userOpHashToSign, "hex").toString("base64"),
+      timeout: 60000,
+      userVerification: "required",
+      rpId: "test",
+      allowCredentials: [
+        {
+          id: _credential.id, // rawId
+          type: "public-key",
+        },
+      ],
+    },
+  });
+  // return parseSignatureResponse({
+  //   signatureB64: sigCredential.response.signature,
+  //   rawAuthenticatorDataB64: sigCredential.response.authenticatorData,
+  //   rawClientDataJSONB64: sigCredential.response.clientDataJSON,
+  //   passkeyName: keyName,
+  // });
 
   // get authenticator data
   const { authenticatorData } = cred.response;

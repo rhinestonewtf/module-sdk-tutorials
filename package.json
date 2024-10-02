@@ -14,13 +14,13 @@
     "docker:down": "docker-compose down"
   },
   "dependencies": {
+    "@github/webauthn-json": "^2.1.1",
     "@noble/curves": "^1.6.0",
     "@rhinestone/module-sdk": "^0.1.17",
-    "@simplewebauthn/browser": "^10.0.0",
-    "@simplewebauthn/typescript-types": "^8.3.4",
+    "crypto": "^1.0.1",
     "jest": "^29.7.0",
-    "permissionless": "^0.2.3",
     "ts-jest": "^29.2.5",
+    "permissionless": "^0.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2",
     "viem": "^2.21.16"

@@ -1,18 +1,4 @@
 import {
-  getSmartSessionsValidator,
-  OWNABLE_VALIDATOR_ADDRESS,
-  getSudoPolicy,
-  Session,
-  getSessionDigest,
-  SMART_SESSIONS_ADDRESS,
-  hashChainSessions,
-  getClient,
-  getAccount,
-  getPermissionId,
-  getSessionNonce,
-  encodeSmartSessionSignature,
-  SmartSessionMode,
-  ChainSession,
   getSetOwnableValidatorThresholdAction,
   getSocialRecoveryValidator,
   getOwnableValidator,
@@ -21,17 +7,7 @@ import {
   MOCK_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  encodeAbiParameters,
-  toHex,
-  toBytes,
-  Address,
-  Hex,
-  createPublicClient,
-  http,
-  encodePacked,
-  pad,
-} from "viem";
+import { createPublicClient, http, encodePacked, pad } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";

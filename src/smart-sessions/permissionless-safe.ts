@@ -26,7 +26,6 @@ import {
   Hex,
   createPublicClient,
   http,
-  encodePacked,
   pad,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
