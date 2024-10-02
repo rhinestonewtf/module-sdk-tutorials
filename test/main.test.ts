@@ -3,6 +3,7 @@ import { ensureBundlerIsReady, ensurePaymasterIsReady } from "./healthCheck";
 import smartSessionsPermissionlessSafe from "../src/smart-sessions/permissionless-safe";
 import deadmanSwitchPermissionlessSafe from "../src/deadman-switch/permissionless-safe";
 import socialRecoveryPermissionlessSafe from "../src/social-recovery/permissionless-safe";
+import webauthnPermissionlessSafe from "../src/webauthn/permissionless-safe";
 import { createTestClient, http } from "viem";
 
 const bundlerUrl = "http://localhost:4337";
@@ -30,23 +31,35 @@ describe("Test erc7579 reference implementation", () => {
     // });
   }, 2000);
 
-  it("should test smart sessions with permissionless", async () => {
-    await smartSessionsPermissionlessSafe({
+  // it("should test smart sessions with permissionless", async () => {
+  //   const receipt = await smartSessionsPermissionlessSafe({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  // }, 20000);
+
+  it("should test deadman switch with permissionless", async () => {
+    const receipt = await deadmanSwitchPermissionlessSafe({
       bundlerUrl,
       rpcUrl,
       paymasterUrl,
       chain: sepolia,
     });
   }, 20000);
-  //   it("should test deadman switch with permissionless", async () => {
-  //     await deadmanSwitchPermissionlessSafe({
-  //       bundlerUrl,
-  //       rpcUrl,
-  //       chain: sepolia,
-  //     });
-  //   }, 20000);
+
   it("should test social recovery with permissionless", async () => {
-    await socialRecoveryPermissionlessSafe({
+    const receipt = await socialRecoveryPermissionlessSafe({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+  }, 20000);
+
+  it("should test webauhtn with permissionless", async () => {
+    const receipt = await webauthnPermissionlessSafe({
       bundlerUrl,
       rpcUrl,
       paymasterUrl,

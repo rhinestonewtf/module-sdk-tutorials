@@ -14,7 +14,10 @@
     "docker:down": "docker-compose down"
   },
   "dependencies": {
+    "@noble/curves": "^1.6.0",
     "@rhinestone/module-sdk": "^0.1.17",
+    "@simplewebauthn/browser": "^10.0.0",
+    "@simplewebauthn/typescript-types": "^8.3.4",
     "jest": "^29.7.0",
     "permissionless": "^0.2.3",
     "ts-jest": "^29.2.5",
