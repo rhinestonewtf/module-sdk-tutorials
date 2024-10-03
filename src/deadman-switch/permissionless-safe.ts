@@ -106,7 +106,7 @@ export default async function main({
     account,
     client,
     nominee: nominee.address,
-    timeout: 10,
+    timeout: 1,
     moduleType: "validator",
   });
 
@@ -114,6 +114,10 @@ export default async function main({
     type: deadmanSwitch.type,
     address: deadmanSwitch.module,
     context: deadmanSwitch.initData!,
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash1,
   });
 
   const opHash2 = await smartAccountClient.installModule({
@@ -127,6 +131,19 @@ export default async function main({
     ),
   });
 
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash2,
+  });
+
+  const config = await publicClient.readContract({
+    address: deadmanSwitch.module,
+    abi: parseAbi(["function config(address) external view"]),
+    functionName: "config",
+    args: [safeAccount.address],
+  });
+
+  console.log(config);
+
   // wait for 10 seconds
   await new Promise((resolve) => setTimeout(resolve, 10000));
 
@@ -136,18 +153,16 @@ export default async function main({
     key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 }) || 0),
   });
 
-  const newNominee = privateKeyToAccount(
-    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
-  );
-
   const userOperation = await smartAccountClient.prepareUserOperation({
     account: safeAccount,
     calls: [
       {
-        to: deadmanSwitch.module,
+        to: "0x25a4b2f363678e13a0a5db79b712de00347a593e",
         data: encodeFunctionData({
-          abi: parseAbi(["function setNominee(address nominee) external"]),
-          args: [newNominee.address],
+          abi: parseAbi([
+            "function trustAttesters(uint8 threshold, address[] calldata attesters) external",
+          ]),
+          args: [1, [RHINESTONE_ATTESTER_ADDRESS]],
         }),
         value: BigInt(0),
       },
@@ -171,10 +186,12 @@ export default async function main({
     account: safeAccount,
     calls: [
       {
-        to: deadmanSwitch.module,
+        to: "0x25a4b2f363678e13a0a5db79b712de00347a593e",
         data: encodeFunctionData({
-          abi: parseAbi(["function setNominee(address nominee) external"]),
-          args: [newNominee.address],
+          abi: parseAbi([
+            "function trustAttesters(uint8 threshold, address[] calldata attesters) external",
+          ]),
+          args: [1, [RHINESTONE_ATTESTER_ADDRESS]],
         }),
         value: BigInt(0),
       },

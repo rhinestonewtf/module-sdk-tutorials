@@ -7,7 +7,13 @@ import {
   MOCK_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, http, encodePacked, pad } from "viem";
+import {
+  createPublicClient,
+  http,
+  encodePacked,
+  pad,
+  encodeAbiParameters,
+} from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -49,6 +55,30 @@ export default async function main({
 
   const owner = privateKeyToAccount(generatePrivateKey());
 
+  const ownableValidator = getOwnableValidator({
+    owners: [
+      "0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2",
+      "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    ],
+    threshold: 2,
+  });
+
+  const guardian1 = privateKeyToAccount(
+    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
+  ); // the key coresponding to the first guardian
+
+  const guardian2 = privateKeyToAccount(
+    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
+  ); // the key coresponding to the second guardian
+
+  console.log("Guardian 1 address: ", guardian1.address);
+  console.log("Guardian 2 address: ", guardian2.address);
+
+  const socialRecovery = getSocialRecoveryValidator({
+    threshold: 2,
+    guardians: [guardian1.address, guardian2.address],
+  });
+
   const safeAccount = await toSafeSmartAccount({
     client: publicClient,
     owners: [owner],
@@ -66,6 +96,16 @@ export default async function main({
       MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
     ],
     attestersThreshold: 1,
+    validators: [
+      {
+        address: ownableValidator.module,
+        context: ownableValidator.initData!,
+      },
+      {
+        address: socialRecovery.module,
+        context: socialRecovery.initData!,
+      },
+    ],
   });
 
   const smartAccountClient = createSmartAccountClient({
@@ -80,50 +120,24 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  const ownableValidator = getOwnableValidator({
-    owners: [
-      "0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2",
-      "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-    ],
-    threshold: 2,
-  });
+  // const opHash1 = await smartAccountClient.installModule({
+  //   type: ownableValidator.type,
+  //   address: ownableValidator.module,
+  //   context: ownableValidator.initData!,
+  // });
 
-  const opHash1 = await smartAccountClient.installModule({
-    type: ownableValidator.type,
-    address: ownableValidator.module,
-    context: ownableValidator.initData!,
-  });
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash1,
-  });
-
-  const module = getSocialRecoveryValidator({
-    threshold: 2,
-    guardians: [
-      "0xAB3E90EDC2911E5703391bf183555f9F06A5a5a6",
-      "0x576338c36ded622A11c5E51aFB227553aA2Ed813",
-    ],
-  });
+  // await pimlicoClient.waitForUserOperationReceipt({
+  //   hash: opHash1,
+  // });
 
   const action = getSetOwnableValidatorThresholdAction({
     threshold: 1,
   });
 
-  const opHash2 = await smartAccountClient.installModule({
-    type: module.type,
-    address: module.module,
-    context: module.initData!,
-  });
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash2,
-  });
-
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(module.module, { dir: "right", size: 24 }) || 0),
+    key: BigInt(pad(socialRecovery.module, { dir: "right", size: 24 }) || 0),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -132,7 +146,7 @@ export default async function main({
       {
         to: action.target,
         data: action.callData,
-        value: action.value,
+        value: 0,
       },
     ],
     nonce: nonce,
@@ -146,14 +160,6 @@ export default async function main({
     userOperation,
   });
 
-  const guardian1 = privateKeyToAccount(
-    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
-  ); // the key coresponding to the first guardian
-
-  const guardian2 = privateKeyToAccount(
-    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
-  ); // the key coresponding to the second guardian
-
   const signature1 = await guardian1.signMessage({
     message: { raw: userOpHashToSign },
   });
@@ -161,11 +167,6 @@ export default async function main({
   const signature2 = await guardian2.signMessage({
     message: { raw: userOpHashToSign },
   });
-
-  userOperation.signature = encodePacked(
-    ["bytes", "bytes"],
-    [signature1, signature2]
-  );
 
   const userOpHash = await smartAccountClient.sendUserOperation({
     account: safeAccount,
