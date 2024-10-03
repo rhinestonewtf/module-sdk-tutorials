@@ -1,17 +1,32 @@
 import {
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
+  getDeadmanSwitch,
+  getAccount,
+  getClient,
+  getDeadmanSwitchValidatorMockSignature,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, http } from "viem";
+import {
+  createPublicClient,
+  encodeAbiParameters,
+  encodeFunctionData,
+  Hex,
+  http,
+  pad,
+  parseAbi,
+  parseAbiParameters,
+} from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import {
   createPaymasterClient,
   entryPoint07Address,
+  getUserOperationHash,
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
+import { getAccountNonce } from "permissionless/actions";
 
 export default async function main({
   bundlerUrl,
@@ -74,9 +89,103 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  //   const receipt = await pimlicoClient.waitForUserOperationReceipt({
-  //     hash: userOpHash,
-  //   });
+  const nominee = privateKeyToAccount(
+    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
+  );
 
-  //   return receipt;
+  const account = getAccount({
+    address: safeAccount.address,
+    type: "safe",
+  });
+
+  const client = getClient({
+    rpcUrl,
+  });
+
+  const deadmanSwitch = await getDeadmanSwitch({
+    account,
+    client,
+    nominee: nominee.address,
+    timeout: 10,
+    moduleType: "validator",
+  });
+
+  const opHash1 = await smartAccountClient.installModule({
+    type: deadmanSwitch.type,
+    address: deadmanSwitch.module,
+    context: deadmanSwitch.initData!,
+  });
+
+  const opHash2 = await smartAccountClient.installModule({
+    type: "hook",
+    address: deadmanSwitch.module,
+    context: encodeAbiParameters(
+      parseAbiParameters(
+        "uint8 hookType, bytes4 selector, bytes memory initData"
+      ),
+      [0, "0x00000000", "0x"]
+    ),
+  });
+
+  // wait for 10 seconds
+  await new Promise((resolve) => setTimeout(resolve, 10000));
+
+  const nonce = await getAccountNonce(publicClient, {
+    address: safeAccount.address,
+    entryPointAddress: entryPoint07Address,
+    key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 }) || 0),
+  });
+
+  const newNominee = privateKeyToAccount(
+    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
+  );
+
+  const userOperation = await smartAccountClient.prepareUserOperation({
+    account: safeAccount,
+    calls: [
+      {
+        to: deadmanSwitch.module,
+        data: encodeFunctionData({
+          abi: parseAbi(["function setNominee(address nominee) external"]),
+          args: [newNominee.address],
+        }),
+        value: BigInt(0),
+      },
+    ],
+    nonce: nonce,
+    signature: getDeadmanSwitchValidatorMockSignature() as Hex,
+  });
+
+  const userOpHashToSign = getUserOperationHash({
+    chainId: chain.id,
+    entryPointAddress: entryPoint07Address,
+    entryPointVersion: "0.7",
+    userOperation,
+  });
+
+  const signature = await nominee.signMessage({
+    message: { raw: userOpHashToSign },
+  });
+
+  const userOpHash = await smartAccountClient.sendUserOperation({
+    account: safeAccount,
+    calls: [
+      {
+        to: deadmanSwitch.module,
+        data: encodeFunctionData({
+          abi: parseAbi(["function setNominee(address nominee) external"]),
+          args: [newNominee.address],
+        }),
+        value: BigInt(0),
+      },
+    ],
+    nonce: nonce,
+    signature: signature,
+  });
+
+  const receipt = await pimlicoClient.waitForUserOperationReceipt({
+    hash: userOpHash,
+  });
+
+  return receipt;
 }
