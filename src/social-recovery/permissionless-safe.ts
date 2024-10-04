@@ -63,22 +63,6 @@ export default async function main({
     threshold: 2,
   });
 
-  const guardian1 = privateKeyToAccount(
-    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
-  ); // the key coresponding to the first guardian
-
-  const guardian2 = privateKeyToAccount(
-    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
-  ); // the key coresponding to the second guardian
-
-  console.log("Guardian 1 address: ", guardian1.address);
-  console.log("Guardian 2 address: ", guardian2.address);
-
-  const socialRecovery = getSocialRecoveryValidator({
-    threshold: 2,
-    guardians: [guardian1.address, guardian2.address],
-  });
-
   const safeAccount = await toSafeSmartAccount({
     client: publicClient,
     owners: [owner],
@@ -101,10 +85,6 @@ export default async function main({
         address: ownableValidator.module,
         context: ownableValidator.initData!,
       },
-      {
-        address: socialRecovery.module,
-        context: socialRecovery.initData!,
-      },
     ],
   });
 
@@ -120,15 +100,31 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  // const opHash1 = await smartAccountClient.installModule({
-  //   type: ownableValidator.type,
-  //   address: ownableValidator.module,
-  //   context: ownableValidator.initData!,
-  // });
+  const guardian1 = privateKeyToAccount(
+    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
+  ); // the key coresponding to the first guardian
 
-  // await pimlicoClient.waitForUserOperationReceipt({
-  //   hash: opHash1,
-  // });
+  const guardian2 = privateKeyToAccount(
+    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
+  ); // the key coresponding to the second guardian
+
+  console.log("Guardian 1 address: ", guardian1.address);
+  console.log("Guardian 2 address: ", guardian2.address);
+
+  const socialRecovery = getSocialRecoveryValidator({
+    threshold: 2,
+    guardians: [guardian1.address, guardian2.address],
+  });
+
+  const opHash1 = await smartAccountClient.installModule({
+    type: socialRecovery.type,
+    address: socialRecovery.module,
+    initData: socialRecovery.initData!,
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash1,
+  });
 
   const action = getSetOwnableValidatorThresholdAction({
     threshold: 1,
