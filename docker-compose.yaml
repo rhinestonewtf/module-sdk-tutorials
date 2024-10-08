@@ -9,13 +9,14 @@ services:
         "https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}",
         "--host",
         "0.0.0.0",
-        "--block-time",
-        "0.1",
         "--silent",
       ]
     platform: linux/x86_64
 
   mock-paymaster:
+    restart: always
+    depends_on:
+      - anvil
     image: ghcr.io/pimlicolabs/mock-verifying-paymaster:main
     ports: ["3000:3000"]
     environment:
@@ -23,6 +24,8 @@ services:
       - ANVIL_RPC=http://anvil:8545
 
   alto:
+    depends_on:
+      - anvil
     image: ghcr.io/pimlicolabs/mock-alto-bundler:main
     ports: ["4337:4337"]
     environment:

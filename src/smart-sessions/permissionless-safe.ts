@@ -16,6 +16,7 @@ import {
   getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
+  getTrustAttestersAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -101,6 +102,29 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
+  const trustAttestersAction = getTrustAttestersAction({
+    threshold: 1,
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
+    ],
+  });
+
+  const userOpHash1 = await smartAccountClient.sendUserOperation({
+    account: safeAccount,
+    calls: [
+      {
+        to: trustAttestersAction.target,
+        value: BigInt(0),
+        data: trustAttestersAction.callData,
+      },
+    ],
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: userOpHash1,
+  });
+
   const smartSessions = getSmartSessionsValidator({
     sessions: [
       {
@@ -114,7 +138,7 @@ export default async function main({
               type: "address[]",
             },
           ],
-          [BigInt(1), [privateKeyToAccount(generatePrivateKey()).address]]
+          [BigInt(1), [privateKeyToAccount(generatePrivateKey()).address]],
         ),
         salt: toHex(toBytes("2", { size: 32 })),
         userOpPolicies: [],
@@ -141,13 +165,15 @@ export default async function main({
 
   const opHash = await smartAccountClient.installModule({
     type: smartSessions.type,
-    address: smartSessions.module,
+    address: "0xDDFF43A42726df11E34123f747bDce0f755F784d",
     context: smartSessions.initData!,
   });
 
-  await pimlicoClient.waitForUserOperationReceipt({
+  const tx = await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
   });
+
+  console.log(tx);
 
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
@@ -162,7 +188,7 @@ export default async function main({
           type: "address[]",
         },
       ],
-      [BigInt(1), [sessionOwner.address]]
+      [BigInt(1), [sessionOwner.address]],
     ),
     salt: toHex(toBytes("41414141", { size: 32 })),
     userOpPolicies: [],
@@ -241,7 +267,7 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(smartSessions.module, { dir: "right", size: 24 }) || 0),
+    key: BigInt(pad(smartSessions.module, { dir: "right", size: 24 })),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -278,36 +304,11 @@ export default async function main({
     userOperation,
   });
 
-  const signature = await sessionOwner.signMessage({
+  userOperation.signature = await sessionOwner.signMessage({
     message: { raw: userOpHashToSign },
   });
 
-  const userOpHash = await smartAccountClient.sendUserOperation({
-    account: safeAccount,
-    calls: [
-      {
-        to: session.actions[0].actionTarget,
-        value: BigInt(0),
-        data: session.actions[0].actionTargetSelector,
-      },
-    ],
-    nonce,
-    signature: encodeSmartSessionSignature({
-      mode: SmartSessionMode.ENABLE,
-      permissionId,
-      signature,
-      enableSessionData: {
-        enableSession: {
-          chainDigestIndex: 0,
-          hashesAndChainIds: chainDigests,
-          sessionToEnable: session,
-          permissionEnableSig,
-        },
-        validator: OWNABLE_VALIDATOR_ADDRESS,
-        accountType: "safe",
-      },
-    }),
-  });
+  const userOpHash = await smartAccountClient.sendUserOperation(userOperation);
 
   const receipt = await pimlicoClient.waitForUserOperationReceipt({
     hash: userOpHash,

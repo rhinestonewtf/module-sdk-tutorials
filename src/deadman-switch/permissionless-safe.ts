@@ -90,7 +90,7 @@ export default async function main({
   }).extend(erc7579Actions());
 
   const nominee = privateKeyToAccount(
-    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
+    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7",
   );
 
   const account = getAccount({
@@ -125,9 +125,9 @@ export default async function main({
     address: deadmanSwitch.module,
     context: encodeAbiParameters(
       parseAbiParameters(
-        "uint8 hookType, bytes4 selector, bytes memory initData"
+        "uint8 hookType, bytes4 selector, bytes memory initData",
       ),
-      [0, "0x00000000", "0x"]
+      [0, "0x00000000", "0x"],
     ),
   });
 
@@ -135,22 +135,13 @@ export default async function main({
     hash: opHash2,
   });
 
-  const config = await publicClient.readContract({
-    address: deadmanSwitch.module,
-    abi: parseAbi(["function config(address) external view"]),
-    functionName: "config",
-    args: [safeAccount.address],
-  });
-
-  console.log(config);
-
   // wait for 10 seconds
   await new Promise((resolve) => setTimeout(resolve, 10000));
 
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 }) || 0),
+    key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 })),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -178,27 +169,11 @@ export default async function main({
     userOperation,
   });
 
-  const signature = await nominee.signMessage({
+  userOperation.signature = await nominee.signMessage({
     message: { raw: userOpHashToSign },
   });
 
-  const userOpHash = await smartAccountClient.sendUserOperation({
-    account: safeAccount,
-    calls: [
-      {
-        to: "0x25a4b2f363678e13a0a5db79b712de00347a593e",
-        data: encodeFunctionData({
-          abi: parseAbi([
-            "function trustAttesters(uint8 threshold, address[] calldata attesters) external",
-          ]),
-          args: [1, [RHINESTONE_ATTESTER_ADDRESS]],
-        }),
-        value: BigInt(0),
-      },
-    ],
-    nonce: nonce,
-    signature: signature,
-  });
+  const userOpHash = await smartAccountClient.sendUserOperation(userOperation);
 
   const receipt = await pimlicoClient.waitForUserOperationReceipt({
     hash: userOpHash,

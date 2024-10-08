@@ -7,13 +7,7 @@ import {
   MOCK_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  createPublicClient,
-  http,
-  encodePacked,
-  pad,
-  encodeAbiParameters,
-} from "viem";
+import { createPublicClient, http, encodePacked, pad } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -101,11 +95,11 @@ export default async function main({
   }).extend(erc7579Actions());
 
   const guardian1 = privateKeyToAccount(
-    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7"
+    "0xc171c45f3d35fad832c53cade38e8d21b8d5cc93d1887e867fac626c1c0d6be7",
   ); // the key coresponding to the first guardian
 
   const guardian2 = privateKeyToAccount(
-    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67"
+    "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67",
   ); // the key coresponding to the second guardian
 
   console.log("Guardian 1 address: ", guardian1.address);
@@ -133,7 +127,7 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(socialRecovery.module, { dir: "right", size: 24 }) || 0),
+    key: BigInt(pad(socialRecovery.module, { dir: "right", size: 24 })),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -142,7 +136,7 @@ export default async function main({
       {
         to: action.target,
         data: action.callData,
-        value: 0,
+        value: action.value,
       },
     ],
     nonce: nonce,
@@ -164,18 +158,12 @@ export default async function main({
     message: { raw: userOpHashToSign },
   });
 
-  const userOpHash = await smartAccountClient.sendUserOperation({
-    account: safeAccount,
-    calls: [
-      {
-        to: action.target,
-        data: action.callData,
-        value: BigInt(0),
-      },
-    ],
-    nonce: nonce,
-    signature: encodePacked(["bytes", "bytes"], [signature1, signature2]),
-  });
+  userOperation.signature = encodePacked(
+    ["bytes", "bytes"],
+    [signature1, signature2],
+  );
+
+  const userOpHash = await smartAccountClient.sendUserOperation(userOperation);
 
   const receipt = await pimlicoClient.waitForUserOperationReceipt({
     hash: userOpHash,

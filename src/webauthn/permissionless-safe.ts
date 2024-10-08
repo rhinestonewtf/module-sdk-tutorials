@@ -143,7 +143,7 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(webauthn.module, { dir: "right", size: 24 }) || 0),
+    key: BigInt(pad(webauthn.module, { dir: "right", size: 24 })),
   });
 
   const action = getTrustAttestersAction({
@@ -214,7 +214,7 @@ export default async function main({
   // get authenticator data
   const { authenticatorData } = cred.response;
   const authenticatorDataHex = uint8ArrayToHexString(
-    b64ToBytes(authenticatorData)
+    b64ToBytes(authenticatorData),
   );
 
   // get client data JSON
