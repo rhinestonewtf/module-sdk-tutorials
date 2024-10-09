@@ -6,16 +6,17 @@ import {
   getClient,
   getDeadmanSwitchValidatorMockSignature,
   getTrustAttestersAction,
+  encodeModuleInstallationData,
+  encodeValidatorNonce,
+  SafeHookType,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
   createPublicClient,
   encodeAbiParameters,
-  encodeFunctionData,
   Hex,
   http,
   pad,
-  parseAbi,
   parseAbiParameters,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
@@ -120,12 +121,14 @@ export default async function main({
   const opHash2 = await smartAccountClient.installModule({
     type: "hook",
     address: deadmanSwitch.module,
-    context: encodeAbiParameters(
-      parseAbiParameters(
-        "uint8 hookType, bytes4 selector, bytes memory initData",
-      ),
-      [0, "0x00000000", "0x"],
-    ),
+    context: encodeModuleInstallationData({
+      account,
+      module: {
+        ...deadmanSwitch,
+        initData: "0x",
+        type: "hook",
+      },
+    }),
   });
 
   await pimlicoClient.waitForUserOperationReceipt({
@@ -138,7 +141,7 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 })),
+    key: encodeValidatorNonce({ account, validator: deadmanSwitch }),
   });
 
   const trustAttestersAction = getTrustAttestersAction({

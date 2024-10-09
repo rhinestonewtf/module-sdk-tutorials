@@ -5,6 +5,8 @@ import {
   getSocialRecoveryMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
+  encodeValidatorNonce,
+  getAccount,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createPublicClient, http, encodePacked, pad } from "viem";
@@ -120,7 +122,13 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(socialRecovery.module, { dir: "right", size: 24 })),
+    key: encodeValidatorNonce({
+      account: getAccount({
+        address: safeAccount.address,
+        type: "safe",
+      }),
+      validator: socialRecovery,
+    }),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
