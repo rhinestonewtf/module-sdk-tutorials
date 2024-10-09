@@ -76,8 +76,8 @@ export default async function main({
     attestersThreshold: 1,
     validators: [
       {
-        address: ownableValidator.module,
-        context: ownableValidator.initData!,
+        address: ownableValidator.address,
+        context: ownableValidator.initData,
       },
     ],
   });
@@ -102,25 +102,18 @@ export default async function main({
     "0x1a4c05be22dd9294615087ba1dba4266ae68cdc320d9164dbf3650ec0db60f67",
   ); // the key coresponding to the second guardian
 
-  console.log("Guardian 1 address: ", guardian1.address);
-  console.log("Guardian 2 address: ", guardian2.address);
-
   const socialRecovery = getSocialRecoveryValidator({
     threshold: 2,
     guardians: [guardian1.address, guardian2.address],
   });
 
-  const opHash1 = await smartAccountClient.installModule({
-    type: socialRecovery.type,
-    address: socialRecovery.module,
-    initData: socialRecovery.initData!,
-  });
+  const opHash1 = await smartAccountClient.installModule(socialRecovery);
 
   await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash1,
   });
 
-  const action = getSetOwnableValidatorThresholdAction({
+  const recoveryAction = getSetOwnableValidatorThresholdAction({
     threshold: 1,
   });
 
@@ -132,15 +125,11 @@ export default async function main({
 
   const userOperation = await smartAccountClient.prepareUserOperation({
     account: safeAccount,
-    calls: [
-      {
-        to: action.target,
-        data: action.callData,
-        value: action.value,
-      },
-    ],
+    calls: [recoveryAction],
     nonce: nonce,
-    signature: getSocialRecoveryMockSignature(),
+    signature: getSocialRecoveryMockSignature({
+      threshold: 2,
+    }),
   });
 
   const userOpHashToSign = getUserOperationHash({

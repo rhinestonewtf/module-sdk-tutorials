@@ -16,7 +16,7 @@
   "dependencies": {
     "@github/webauthn-json": "^2.1.1",
     "@noble/curves": "^1.6.0",
-    "@rhinestone/module-sdk": "^0.1.18",
+    "@rhinestone/module-sdk": "^0.1.19",
     "crypto": "^1.0.1",
     "jest": "^29.7.0",
     "permissionless": "^0.2.5",

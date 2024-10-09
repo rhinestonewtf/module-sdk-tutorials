@@ -163,11 +163,7 @@ export default async function main({
     ],
   });
 
-  const opHash = await smartAccountClient.installModule({
-    type: smartSessions.type,
-    address: "0xDDFF43A42726df11E34123f747bDce0f755F784d",
-    context: smartSessions.initData!,
-  });
+  const opHash = await smartAccountClient.installModule(smartSessions);
 
   const tx = await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,

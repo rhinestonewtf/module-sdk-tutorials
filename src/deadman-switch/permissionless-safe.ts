@@ -5,6 +5,7 @@ import {
   getAccount,
   getClient,
   getDeadmanSwitchValidatorMockSignature,
+  getTrustAttestersAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -110,11 +111,7 @@ export default async function main({
     moduleType: "validator",
   });
 
-  const opHash1 = await smartAccountClient.installModule({
-    type: deadmanSwitch.type,
-    address: deadmanSwitch.module,
-    context: deadmanSwitch.initData!,
-  });
+  const opHash1 = await smartAccountClient.installModule(deadmanSwitch);
 
   await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash1,
@@ -144,20 +141,16 @@ export default async function main({
     key: BigInt(pad(deadmanSwitch.module, { dir: "right", size: 24 })),
   });
 
+  const trustAttestersAction = getTrustAttestersAction({
+    threshold: 1,
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+    ],
+  });
+
   const userOperation = await smartAccountClient.prepareUserOperation({
     account: safeAccount,
-    calls: [
-      {
-        to: "0x25a4b2f363678e13a0a5db79b712de00347a593e",
-        data: encodeFunctionData({
-          abi: parseAbi([
-            "function trustAttesters(uint8 threshold, address[] calldata attesters) external",
-          ]),
-          args: [1, [RHINESTONE_ATTESTER_ADDRESS]],
-        }),
-        value: BigInt(0),
-      },
-    ],
+    calls: [trustAttestersAction],
     nonce: nonce,
     signature: getDeadmanSwitchValidatorMockSignature() as Hex,
   });

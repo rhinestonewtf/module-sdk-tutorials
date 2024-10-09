@@ -15,8 +15,8 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0
       '@rhinestone/module-sdk':
-        specifier: ^0.1.18
-        version: 0.1.18(viem@2.21.18(typescript@5.6.2))
+        specifier: ^0.1.19
+        version: 0.1.19(viem@2.21.18(typescript@5.6.2))
       crypto:
         specifier: ^1.0.1
         version: 1.0.1
@@ -339,8 +339,8 @@ packages:
     resolution: {integrity: sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@rhinestone/module-sdk@0.1.18':
-    resolution: {integrity: sha512-mYWB9P1Q7TE++QbkE6+DTBcWZTYykEhdzsyw9O4uUi2CCE/KUFwKfU0PmxjOTLDw4zcUxL8ponAys8avOJOYRg==}
+  '@rhinestone/module-sdk@0.1.19':
+    resolution: {integrity: sha512-dS5Rw1HwQywGDpIWphf6TWxcr2ireZvL0gJgKPEqL4yIrncsXx/IqrXRqHP5jvTh9XH920K/WS6evSvyniVlUA==}
     peerDependencies:
       viem: ^2.0.0
 
@@ -1799,7 +1799,7 @@ snapshots:
 
   '@noble/hashes@1.5.0': {}
 
-  '@rhinestone/module-sdk@0.1.18(viem@2.21.18(typescript@5.6.2))':
+  '@rhinestone/module-sdk@0.1.19(viem@2.21.18(typescript@5.6.2))':
     dependencies:
       solady: 0.0.235
       tslib: 2.7.0
