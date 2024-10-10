@@ -17,6 +17,7 @@ import {
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
   getTrustAttestersAction,
+  encodeValidatorNonce,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -215,10 +216,9 @@ export default async function main({
     rpcUrl,
   });
 
-  const permissionId = (await getPermissionId({
-    client: newClient,
+  const permissionId = getPermissionId({
     session,
-  })) as Hex;
+  });
 
   const sessionNonce = await getSessionNonce({
     client: newClient,
@@ -263,7 +263,10 @@ export default async function main({
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(pad(smartSessions.module, { dir: "right", size: 24 })),
+    key: encodeValidatorNonce({
+      account,
+      validator: smartSessions,
+    }),
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -300,8 +303,24 @@ export default async function main({
     userOperation,
   });
 
-  userOperation.signature = await sessionOwner.signMessage({
+  const signature = await sessionOwner.signMessage({
     message: { raw: userOpHashToSign },
+  });
+
+  userOperation.signature = encodeSmartSessionSignature({
+    mode: SmartSessionMode.ENABLE,
+    permissionId,
+    signature: signature,
+    enableSessionData: {
+      enableSession: {
+        chainDigestIndex: 0,
+        hashesAndChainIds: chainDigests,
+        sessionToEnable: session,
+        permissionEnableSig,
+      },
+      validator: OWNABLE_VALIDATOR_ADDRESS,
+      accountType: "safe",
+    },
   });
 
   const userOpHash = await smartAccountClient.sendUserOperation(userOperation);
