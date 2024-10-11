@@ -8,17 +8,9 @@ import {
   getTrustAttestersAction,
   encodeModuleInstallationData,
   encodeValidatorNonce,
-  SafeHookType,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  createPublicClient,
-  encodeAbiParameters,
-  Hex,
-  http,
-  pad,
-  parseAbiParameters,
-} from "viem";
+import { createPublicClient, Hex, http } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";

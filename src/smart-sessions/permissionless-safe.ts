@@ -18,6 +18,7 @@ import {
   MOCK_ATTESTER_ADDRESS,
   getTrustAttestersAction,
   encodeValidatorNonce,
+  getOwnableValidator,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -28,7 +29,6 @@ import {
   Hex,
   createPublicClient,
   http,
-  pad,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -64,13 +64,18 @@ export default async function main({
       address: entryPoint07Address,
       version: "0.7",
     },
-  }).extend(paymasterActions);
+  });
 
   const paymasterClient = createPaymasterClient({
     transport: http(paymasterUrl),
   });
 
   const owner = privateKeyToAccount(generatePrivateKey());
+
+  const ownableValidator = getOwnableValidator({
+    owners: [owner.address],
+    threshold: 1,
+  });
 
   const safeAccount = await toSafeSmartAccount({
     client: publicClient,
@@ -89,6 +94,12 @@ export default async function main({
       MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
     ],
     attestersThreshold: 1,
+    validators: [
+      {
+        address: ownableValidator.address,
+        context: ownableValidator.initData,
+      },
+    ],
   });
 
   const smartAccountClient = createSmartAccountClient({
@@ -126,51 +137,13 @@ export default async function main({
     hash: userOpHash1,
   });
 
-  const smartSessions = getSmartSessionsValidator({
-    sessions: [
-      {
-        sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
-        sessionValidatorInitData: encodeAbiParameters(
-          [
-            {
-              type: "uint256",
-            },
-            {
-              type: "address[]",
-            },
-          ],
-          [BigInt(1), [privateKeyToAccount(generatePrivateKey()).address]],
-        ),
-        salt: toHex(toBytes("2", { size: 32 })),
-        userOpPolicies: [],
-        erc7739Policies: {
-          allowedERC7739Content: [],
-          erc1271Policies: [],
-        },
-        actions: [
-          {
-            actionTarget:
-              "0xa564cB165815937967a7d018B7F34B907B52fcFd" as Address, // an address as the target of the session execution
-            actionTargetSelector: "0x00000000" as Hex, // function selector to be used in the execution, in this case no function selector is used
-            actionPolicies: [
-              {
-                policy: getSudoPolicy().address,
-                initData: getSudoPolicy().initData,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
+  const smartSessions = getSmartSessionsValidator({});
 
   const opHash = await smartAccountClient.installModule(smartSessions);
 
-  const tx = await pimlicoClient.waitForUserOperationReceipt({
+  await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
   });
-
-  console.log(tx);
 
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
