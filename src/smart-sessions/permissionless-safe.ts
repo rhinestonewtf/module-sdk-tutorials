@@ -36,7 +36,6 @@ import { createPimlicoClient } from "permissionless/clients/pimlico";
 import {
   entryPoint07Address,
   getUserOperationHash,
-  paymasterActions,
   createPaymasterClient,
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
