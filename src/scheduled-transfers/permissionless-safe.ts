@@ -5,9 +5,17 @@ import {
   getScheduledTransfersExecutor,
   getExecuteScheduledTransferAction,
   OWNABLE_VALIDATOR_ADDRESS,
+  getOwnableValidator,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { Address, createPublicClient, http } from "viem";
+import {
+  Address,
+  Chain,
+  createPublicClient,
+  encodeFunctionData,
+  http,
+  parseAbi,
+} from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -23,11 +31,13 @@ export default async function main({
   rpcUrl,
   paymasterUrl,
   chain,
+  automationsApiKey,
 }: {
   bundlerUrl: string;
   rpcUrl: string;
   paymasterUrl: string;
-  chain: any;
+  chain: Chain;
+  automationsApiKey: string;
 }) {
   const publicClient = createPublicClient({
     transport: http(rpcUrl),
@@ -48,6 +58,11 @@ export default async function main({
 
   const owner = privateKeyToAccount(generatePrivateKey());
 
+  const ownableValidator = getOwnableValidator({
+    owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2"],
+    threshold: 1,
+  });
+
   const safeAccount = await toSafeSmartAccount({
     client: publicClient,
     owners: [owner],
@@ -65,6 +80,12 @@ export default async function main({
       MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
     ],
     attestersThreshold: 1,
+    validators: [
+      {
+        address: ownableValidator.address,
+        context: ownableValidator.initData,
+      },
+    ],
   });
 
   const smartAccountClient = createSmartAccountClient({
@@ -79,20 +100,20 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  const executeInterval = 60 * 60 * 24; // 1 day
-  const numberOfExecutions = 10;
-  const startDate = 1710759572; // UNIX timestamp
+  const executeInterval = 60; // in seconds
+  const numberOfExecutions = 2;
+  const startDate = Date.now(); // UNIX timestamp
 
   const scheduledTransfer = {
     startDate: startDate,
     repeatEvery: executeInterval,
     numberOfRepeats: numberOfExecutions,
     token: {
-      token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as Address, // USDC
+      token_address: "0x2c4fa163b4c1A4F065D5135684E69820E101d1B7" as Address, // Mock USDC
       decimals: 6,
     },
-    amount: 10,
-    recipient: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as Address,
+    amount: 1,
+    recipient: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as Address,
   };
 
   const executionData = getScheduledTransferData({
@@ -108,20 +129,34 @@ export default async function main({
 
   const opHash = await smartAccountClient.installModule(scheduledTransfers);
 
+  // todo: get jobId
+  const jobId = 0;
+
   await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
   });
 
+  const opHash2 = await smartAccountClient.sendTransaction({
+    to: scheduledTransfer.token.token_address,
+    data: encodeFunctionData({
+      abi: parseAbi(["function mint(address to, uint256 amount) external"]),
+      functionName: "mint",
+      args: [safeAccount.address, BigInt(10)],
+    }),
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash2,
+  });
+
   const automationClient = createAutomationClient({
-    account: "0x...",
-    accountType: "SAFE", // 'SAFE', 'KERNEL',
-    apiKey: "YOUR_API_KEY",
+    account: safeAccount.address,
+    accountType: "SAFE",
+    apiKey: automationsApiKey,
     accountInitCode: "0x",
     network: 11155111,
     validator: OWNABLE_VALIDATOR_ADDRESS,
   });
-
-  const jobId = 0;
 
   const executeScheduledTranferAction = getExecuteScheduledTransferAction({
     jobId: jobId,
@@ -137,7 +172,7 @@ export default async function main({
   ];
 
   const triggerData = {
-    cronExpression: "*/0 0 * * *",
+    cronExpression: "* * * * *",
     startDate: startDate,
   };
 
@@ -152,18 +187,23 @@ export default async function main({
     },
   });
 
-  const hash = await smartAccountClient.signMessage({
+  const signature = await smartAccountClient.signMessage({
     message: { raw: automation.hash },
   });
-
-  const signature = "0x";
 
   const response = await automationClient.signAutomation({
     automationId: automation.id,
     signature: signature,
   });
 
+  console.log(response);
+
+  // wait for 10 seconds
+  await new Promise((resolve) => setTimeout(resolve, 10000));
+
   const automationLogs = await automationClient.getAutomationLogs(
     automation.id,
   );
+
+  return automationLogs;
 }

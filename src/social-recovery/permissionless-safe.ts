@@ -9,7 +9,7 @@ import {
   getAccount,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { createPublicClient, http, encodePacked, pad } from "viem";
+import { createPublicClient, http, encodePacked, pad, Chain } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -30,7 +30,7 @@ export default async function main({
   bundlerUrl: string;
   rpcUrl: string;
   paymasterUrl: string;
-  chain: any;
+  chain: Chain;
 }) {
   const publicClient = createPublicClient({
     transport: http(rpcUrl),
