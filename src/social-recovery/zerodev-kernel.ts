@@ -18,7 +18,13 @@ import {
 import { getAccountNonce } from "permissionless/actions";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
-import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
+import {
+  createKernelAccount,
+  createKernelAccountClient,
+  createZeroDevPaymasterClient,
+} from "@zerodev/sdk";
+
+type ENTRYPOINT_ADDRESS_V07_TYPE = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 
 export default async function main({
   bundlerUrl,
@@ -44,15 +50,15 @@ export default async function main({
     },
   });
 
-  const paymasterClient = createPaymasterClient({
-    transport: http(paymasterUrl),
-  });
+  // const paymasterClient = createPaymasterClient({
+  //   transport: http(paymasterUrl),
+  // });
 
   const owner = privateKeyToAccount(generatePrivateKey());
 
   const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
     signer: owner,
-    entryPoint: entryPoint07Address,
+    entryPoint: entryPoint07Address as ENTRYPOINT_ADDRESS_V07_TYPE,
     kernelVersion: KERNEL_V3_1,
   });
 
@@ -60,18 +66,17 @@ export default async function main({
     plugins: {
       sudo: ecdsaValidator,
     },
-    entryPoint: entryPoint07Address,
+    entryPoint: entryPoint07Address as ENTRYPOINT_ADDRESS_V07_TYPE,
     kernelVersion: KERNEL_V3_1,
-  }).extend(erc7579Actions({ entryPoint: entryPoint07Address }));
-
-  const ownableValidator = getOwnableValidator({
-    owners: [
-      "0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2",
-      "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-    ],
-    threshold: 2,
   });
-
+  // const ownableValidator = getOwnableValidator({
+  //   owners: [
+  //     "0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2",
+  //     "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  //   ],
+  //   threshold: 2,
+  // });
+  //
   const smartAccountClient = createKernelAccountClient({
     account: kernelAccount,
     chain,
@@ -79,16 +84,15 @@ export default async function main({
     bundlerTransport: http(bundlerUrl),
     middleware: {
       sponsorUserOperation: async ({ userOperation }) => {
-        // todo: implement this
-        //   const zerodevPaymaster = createZeroDevPaymasterClient({
-        //     chain,
-        //     entryPoint,
-        //     transport: http(PAYMASTER_RPC),
-        //   });
-        //   return zerodevPaymaster.sponsorUserOperation({
-        //     userOperation,
-        //     entryPoint,
-        //   });
+        const zerodevPaymaster = createZeroDevPaymasterClient({
+          chain,
+          entryPoint: entryPoint07Address,
+          transport: http(paymasterUrl),
+        });
+        return zerodevPaymaster.sponsorUserOperation({
+          userOperation,
+          entryPoint: entryPoint07Address,
+        });
       },
     },
   });
@@ -117,11 +121,11 @@ export default async function main({
   });
 
   const nonce = await getAccountNonce(publicClient, {
-    address: safeAccount.address,
+    address: kernelAccount.address,
     entryPointAddress: entryPoint07Address,
     key: encodeValidatorNonce({
       account: getAccount({
-        address: safeAccount.address,
+        address: kernelAccount.address,
         type: "safe",
       }),
       validator: socialRecovery,
@@ -129,7 +133,7 @@ export default async function main({
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
-    account: safeAccount,
+    account: kernelAccount,
     calls: [recoveryAction],
     nonce: nonce,
     signature: getSocialRecoveryMockSignature({
