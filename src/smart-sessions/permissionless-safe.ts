@@ -19,16 +19,18 @@ import {
   getTrustAttestersAction,
   encodeValidatorNonce,
   getOwnableValidator,
+  encodeValidationData,
+  getEnableSessionDetails,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
-  encodeAbiParameters,
   toHex,
-  toBytes,
   Address,
   Hex,
   createPublicClient,
   http,
+  Chain,
+  toBytes,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -50,7 +52,7 @@ export default async function main({
   bundlerUrl: string;
   rpcUrl: string;
   paymasterUrl: string;
-  chain: any;
+  chain: Chain;
 }) {
   const publicClient = createPublicClient({
     transport: http(rpcUrl),
@@ -148,18 +150,11 @@ export default async function main({
 
   const session: Session = {
     sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
-    sessionValidatorInitData: encodeAbiParameters(
-      [
-        {
-          type: "uint256",
-        },
-        {
-          type: "address[]",
-        },
-      ],
-      [BigInt(1), [sessionOwner.address]],
-    ),
-    salt: toHex(toBytes("41414141", { size: 32 })),
+    sessionValidatorInitData: encodeValidationData({
+      threshold: 1,
+      owners: [sessionOwner.address],
+    }),
+    salt: toHex(toBytes("0", { size: 32 })),
     userOpPolicies: [],
     erc7739Policies: {
       allowedERC7739Content: [],
@@ -169,14 +164,10 @@ export default async function main({
       {
         actionTarget: "0xa564cB165815937967a7d018B7F34B907B52fcFd" as Address, // an address as the target of the session execution
         actionTargetSelector: "0x00000000" as Hex, // function selector to be used in the execution, in this case no function selector is used
-        actionPolicies: [
-          {
-            policy: getSudoPolicy().address,
-            initData: getSudoPolicy().initData,
-          },
-        ],
+        actionPolicies: [getSudoPolicy()],
       },
     ],
+    chainId: BigInt(chain.id),
   };
 
   const account = getAccount({
@@ -188,49 +179,16 @@ export default async function main({
     rpcUrl,
   });
 
-  const permissionId = getPermissionId({
-    session,
-  });
-
-  const sessionNonce = await getSessionNonce({
-    client: newClient,
+  const sessionDetails = await getEnableSessionDetails({
+    sessions: [session],
     account,
-    permissionId,
-  });
-
-  const sessionDigest = await getSessionDigest({
     client: newClient,
-    account,
-    session,
-    mode: SmartSessionMode.ENABLE,
-    permissionId,
   });
 
-  const chainDigests = [
-    {
-      chainId: BigInt(chain.id), // or your current chain
-      sessionDigest,
-    },
-  ];
-
-  const chainSessions: ChainSession[] = [
-    {
-      chainId: BigInt(chain.id),
-      session: {
-        ...session,
-        account: account.address,
-        smartSession: SMART_SESSIONS_ADDRESS,
-        mode: 1,
-        nonce: sessionNonce,
-      },
-    },
-  ];
-
-  const permissionEnableHash = hashChainSessions(chainSessions);
-
-  const permissionEnableSig = await owner.signMessage({
-    message: { raw: permissionEnableHash },
-  });
+  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
+    await owner.signMessage({
+      message: { raw: sessionDetails.permissionEnableHash },
+    });
 
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
@@ -239,6 +197,10 @@ export default async function main({
       account,
       validator: smartSessions,
     }),
+  });
+
+  sessionDetails.signature = getOwnableValidatorMockSignature({
+    threshold: 1,
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -251,21 +213,7 @@ export default async function main({
       },
     ],
     nonce,
-    signature: encodeSmartSessionSignature({
-      mode: SmartSessionMode.ENABLE,
-      permissionId,
-      signature: getOwnableValidatorMockSignature({ threshold: 1 }),
-      enableSessionData: {
-        enableSession: {
-          chainDigestIndex: 0,
-          hashesAndChainIds: chainDigests,
-          sessionToEnable: session,
-          permissionEnableSig,
-        },
-        validator: OWNABLE_VALIDATOR_ADDRESS,
-        accountType: "safe",
-      },
-    }),
+    signature: encodeSmartSessionSignature(sessionDetails),
   });
 
   const userOpHashToSign = getUserOperationHash({
@@ -275,25 +223,11 @@ export default async function main({
     userOperation,
   });
 
-  const signature = await sessionOwner.signMessage({
+  sessionDetails.signature = await sessionOwner.signMessage({
     message: { raw: userOpHashToSign },
   });
 
-  userOperation.signature = encodeSmartSessionSignature({
-    mode: SmartSessionMode.ENABLE,
-    permissionId,
-    signature: signature,
-    enableSessionData: {
-      enableSession: {
-        chainDigestIndex: 0,
-        hashesAndChainIds: chainDigests,
-        sessionToEnable: session,
-        permissionEnableSig,
-      },
-      validator: OWNABLE_VALIDATOR_ADDRESS,
-      accountType: "safe",
-    },
-  });
+  userOperation.signature = encodeSmartSessionSignature(sessionDetails);
 
   const userOpHash = await smartAccountClient.sendUserOperation(userOperation);
 

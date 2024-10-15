@@ -17,7 +17,7 @@
     "@github/webauthn-json": "^2.1.1",
     "@noble/curves": "^1.6.0",
     "@rhinestone/automations-sdk": "^0.0.2",
-    "@rhinestone/module-sdk": "^0.1.22",
+    "@rhinestone/module-sdk": "^0.1.23",
     "@zerodev/ecdsa-validator": "^5.3.3",
     "@zerodev/sdk": "^5.3.20",
     "crypto": "^1.0.1",

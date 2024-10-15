@@ -20,15 +20,15 @@ describe("Test erc7579 reference implementation", () => {
     });
   }, 2000);
 
-  // it("should test smart sessions with permissionless", async () => {
-  //   const receipt = await smartSessionsPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
-  //     chain: sepolia,
-  //   });
-  //   expect(receipt.success).toBe(true);
-  // }, 40000);
+  it("should test smart sessions with permissionless", async () => {
+    const receipt = await smartSessionsPermissionlessSafe({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+    expect(receipt.success).toBe(true);
+  }, 40000);
   //
   // it("should test deadman switch with permissionless", async () => {
   //   const receipt = await deadmanSwitchPermissionlessSafe({
@@ -50,15 +50,15 @@ describe("Test erc7579 reference implementation", () => {
   //   expect(receipt.success).toBe(true);
   // }, 40000);
   //
-  it("should test social recovery with permissionless", async () => {
-    const receipt = await socialRecoveryZeroDevKernel({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
+  // it("should test social recovery with permissionless", async () => {
+  //   const receipt = await socialRecoveryZeroDevKernel({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
 
   // it("should test scheduled transfers with permissionless", async () => {
   //   const logs = await scheduledTransfersPermissionlessSafe({
