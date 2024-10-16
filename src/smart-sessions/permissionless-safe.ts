@@ -3,16 +3,9 @@ import {
   OWNABLE_VALIDATOR_ADDRESS,
   getSudoPolicy,
   Session,
-  getSessionDigest,
-  SMART_SESSIONS_ADDRESS,
-  hashChainSessions,
   getClient,
   getAccount,
-  getPermissionId,
-  getSessionNonce,
   encodeSmartSessionSignature,
-  SmartSessionMode,
-  ChainSession,
   getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
@@ -175,14 +168,14 @@ export default async function main({
     type: "safe",
   });
 
-  const newClient = getClient({
+  const client = getClient({
     rpcUrl,
   });
 
   const sessionDetails = await getEnableSessionDetails({
     sessions: [session],
     account,
-    client: newClient,
+    client,
   });
 
   sessionDetails.enableSessionData.enableSession.permissionEnableSig =
