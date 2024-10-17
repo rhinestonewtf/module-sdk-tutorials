@@ -21,6 +21,7 @@
     "@zerodev/ecdsa-validator": "^5.3.3",
     "@zerodev/sdk": "^5.3.20",
     "crypto": "^1.0.1",
+    "dotenv": "^16.4.5",
     "jest": "^29.7.0",
     "permissionless": "^0.2.5",
     "ts-jest": "^29.2.5",

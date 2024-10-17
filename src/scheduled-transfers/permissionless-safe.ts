@@ -6,6 +6,9 @@ import {
   getExecuteScheduledTransferAction,
   OWNABLE_VALIDATOR_ADDRESS,
   getOwnableValidator,
+  encode1271Signature,
+  getAccount,
+  encode1271Hash,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -13,8 +16,10 @@ import {
   Chain,
   createPublicClient,
   encodeFunctionData,
+  encodePacked,
   http,
   parseAbi,
+  verifyMessage,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -25,6 +30,7 @@ import {
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
 import { createAutomationClient } from "@rhinestone/automations-sdk";
+import { verifyHash } from "viem/actions";
 
 export default async function main({
   bundlerUrl,
@@ -59,7 +65,7 @@ export default async function main({
   const owner = privateKeyToAccount(generatePrivateKey());
 
   const ownableValidator = getOwnableValidator({
-    owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2"],
+    owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2", owner.address],
     threshold: 1,
   });
 
@@ -109,7 +115,7 @@ export default async function main({
     repeatEvery: executeInterval,
     numberOfRepeats: numberOfExecutions,
     token: {
-      token_address: "0x2c4fa163b4c1A4F065D5135684E69820E101d1B7" as Address, // Mock USDC
+      token_address: "0x8034e69FAFEd6588cc36ff3400AFE5c049a3B92E" as Address, // Mock USDC
       decimals: 6,
     },
     amount: 1,
@@ -136,17 +142,13 @@ export default async function main({
     hash: opHash,
   });
 
-  const opHash2 = await smartAccountClient.sendTransaction({
+  await smartAccountClient.sendTransaction({
     to: scheduledTransfer.token.token_address,
     data: encodeFunctionData({
       abi: parseAbi(["function mint(address to, uint256 amount) external"]),
       functionName: "mint",
       args: [safeAccount.address, BigInt(10)],
     }),
-  });
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash2,
   });
 
   const automationClient = createAutomationClient({
@@ -187,16 +189,32 @@ export default async function main({
     },
   });
 
-  const signature = await smartAccountClient.signMessage({
-    message: { raw: automation.hash },
+  const account = getAccount({
+    address: safeAccount.address,
+    type: "safe",
   });
 
-  const response = await automationClient.signAutomation({
+  const formattedHash = encode1271Hash({
+    account,
+    validator: OWNABLE_VALIDATOR_ADDRESS,
+    chainId: chain.id,
+    hash: automation.hash,
+  });
+
+  const signature = await owner.signMessage({
+    message: { raw: formattedHash },
+  });
+
+  const formattedSignature = encode1271Signature({
+    account,
+    validator: OWNABLE_VALIDATOR_ADDRESS,
+    signature,
+  });
+
+  await automationClient.signAutomation({
     automationId: automation.id,
-    signature: signature,
+    signature: formattedSignature,
   });
-
-  console.log(response);
 
   // wait for 10 seconds
   await new Promise((resolve) => setTimeout(resolve, 10000));
