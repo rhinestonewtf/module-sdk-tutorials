@@ -175,7 +175,7 @@ export default async function main({
   const sessionDetails = await getEnableSessionDetails({
     sessions: [session],
     account,
-    client,
+    clients: [client],
   });
 
   sessionDetails.enableSessionData.enableSession.permissionEnableSig =
