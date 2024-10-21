@@ -5,6 +5,8 @@ import deadmanSwitchPermissionlessSafe from "../src/deadman-switch/permissionles
 import socialRecoveryPermissionlessSafe from "../src/social-recovery/permissionless-safe";
 import socialRecoveryZeroDevKernel from "../src/social-recovery/zerodev-kernel";
 import scheduledTransfersPermissionlessSafe from "../src/scheduled-transfers/permissionless-safe";
+import scheduledOrdersPermissionlessSafe from "../src/scheduled-orders/permissionless-safe";
+import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-safe";
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -71,7 +73,28 @@ describe("Test erc7579 reference implementation", () => {
       chain: sepolia,
       automationsApiKey: process.env.AUTOMATIONS_API_KEY!,
     });
-    console.log(logs);
+    // expect(receipt.success).toBe(true);
+  }, 200000);
+
+  it("should test scheduled orders with permissionless", async () => {
+    const logs = await scheduledOrdersPermissionlessSafe({
+      bundlerUrl: process.env.BUNDLER_URL!,
+      rpcUrl: process.env.RPC_URL!,
+      paymasterUrl: process.env.PAYMASTER_URL!,
+      chain: sepolia,
+      automationsApiKey: process.env.AUTOMATIONS_API_KEY!,
+    });
+    // expect(receipt.success).toBe(true);
+  }, 200000);
+
+  it("should test auto savings with permissionless", async () => {
+    const logs = await autoSavingsPermissionlessSafePermissionlessSafe({
+      bundlerUrl: process.env.BUNDLER_URL!,
+      rpcUrl: process.env.RPC_URL!,
+      paymasterUrl: process.env.PAYMASTER_URL!,
+      chain: sepolia,
+      automationsApiKey: process.env.AUTOMATIONS_API_KEY!,
+    });
     // expect(receipt.success).toBe(true);
   }, 200000);
 

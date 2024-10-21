@@ -1,14 +1,14 @@
 import {
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
-  getScheduledTransferData,
-  getScheduledTransfersExecutor,
-  getExecuteScheduledTransferAction,
   OWNABLE_VALIDATOR_ADDRESS,
   getOwnableValidator,
   encode1271Signature,
   getAccount,
   encode1271Hash,
+  getScheduledOrdersExecutor,
+  getSwapOrderData,
+  getExecuteScheduledOrderAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -107,30 +107,35 @@ export default async function main({
   const numberOfExecutions = 2;
   const startDate = Date.now(); // UNIX timestamp
 
-  const scheduledTransfer = {
+  const recurringOrder = {
     startDate: startDate,
     repeatEvery: executeInterval,
     numberOfRepeats: numberOfExecutions,
-    token: {
+    buyToken: {
       token_address: "0x8034e69FAFEd6588cc36ff3400AFE5c049a3B92E" as Address, // Mock USDC
       decimals: 6,
     },
+    sellToken: {
+      token_address: "0x3520ef0E951125dEfA8476946d6D3153fd07b346" as Address, // Mock USDT
+      decimals: 6,
+    },
     amount: 1,
-    recipient: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as Address,
+    orderType: "buy" as const,
   };
 
-  const executionData = getScheduledTransferData({
-    scheduledTransfer,
+  const executionData = getSwapOrderData({
+    recurringOrder,
   });
 
-  const scheduledTransfers = getScheduledTransfersExecutor({
+  const scheduledOrders = getScheduledOrdersExecutor({
+    chainId: chain.id,
     executeInterval,
     numberOfExecutions,
     startDate,
     executionData,
   });
 
-  const opHash = await smartAccountClient.installModule(scheduledTransfers);
+  const opHash = await smartAccountClient.installModule(scheduledOrders);
 
   // todo: get jobId
   const jobId = 0;
@@ -140,7 +145,7 @@ export default async function main({
   });
 
   await smartAccountClient.sendTransaction({
-    to: scheduledTransfer.token.token_address,
+    to: recurringOrder.sellToken.token_address,
     data: encodeFunctionData({
       abi: parseAbi(["function mint(address to, uint256 amount) external"]),
       functionName: "mint",
@@ -157,16 +162,16 @@ export default async function main({
     validator: OWNABLE_VALIDATOR_ADDRESS,
   });
 
-  const executeScheduledTranferAction = getExecuteScheduledTransferAction({
+  const executeScheduledOrderAction = getExecuteScheduledOrderAction({
     jobId: jobId,
   });
 
   const actions = [
     {
       type: "static" as const,
-      target: executeScheduledTranferAction.target,
-      value: Number(executeScheduledTranferAction.value),
-      callData: executeScheduledTranferAction.callData,
+      target: executeScheduledOrderAction.target,
+      value: Number(executeScheduledOrderAction.value),
+      callData: executeScheduledOrderAction.callData,
     },
   ];
 

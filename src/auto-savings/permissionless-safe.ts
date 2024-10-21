@@ -9,6 +9,8 @@ import {
   encode1271Signature,
   getAccount,
   encode1271Hash,
+  getAutoSavingsExecutor,
+  getAutoSaveAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -16,8 +18,10 @@ import {
   Chain,
   createPublicClient,
   encodeFunctionData,
+  encodePacked,
   http,
   parseAbi,
+  verifyMessage,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -28,6 +32,7 @@ import {
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
 import { createAutomationClient } from "@rhinestone/automations-sdk";
+import { verifyHash } from "viem/actions";
 
 export default async function main({
   bundlerUrl,
@@ -103,49 +108,21 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  const executeInterval = 60; // in seconds
-  const numberOfExecutions = 2;
-  const startDate = Date.now(); // UNIX timestamp
-
-  const scheduledTransfer = {
-    startDate: startDate,
-    repeatEvery: executeInterval,
-    numberOfRepeats: numberOfExecutions,
-    token: {
-      token_address: "0x8034e69FAFEd6588cc36ff3400AFE5c049a3B92E" as Address, // Mock USDC
-      decimals: 6,
-    },
-    amount: 1,
-    recipient: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as Address,
+  const config = {
+    token: "0x8034e69FAFEd6588cc36ff3400AFE5c049a3B92E" as Address, // Mock USDC
+    percentage: BigInt(1),
+    vault: "0xd921f0dF3B56899F26F658809aaa161cdfC2359F" as Address, // WETH Vault
   };
 
-  const executionData = getScheduledTransferData({
-    scheduledTransfer,
+  const autoSavings = getAutoSavingsExecutor({
+    chainId: chain.id,
+    configs: [config],
   });
 
-  const scheduledTransfers = getScheduledTransfersExecutor({
-    executeInterval,
-    numberOfExecutions,
-    startDate,
-    executionData,
-  });
-
-  const opHash = await smartAccountClient.installModule(scheduledTransfers);
-
-  // todo: get jobId
-  const jobId = 0;
+  const opHash = await smartAccountClient.installModule(autoSavings);
 
   await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
-  });
-
-  await smartAccountClient.sendTransaction({
-    to: scheduledTransfer.token.token_address,
-    data: encodeFunctionData({
-      abi: parseAbi(["function mint(address to, uint256 amount) external"]),
-      functionName: "mint",
-      args: [safeAccount.address, BigInt(10)],
-    }),
   });
 
   const automationClient = createAutomationClient({
@@ -157,32 +134,30 @@ export default async function main({
     validator: OWNABLE_VALIDATOR_ADDRESS,
   });
 
-  const executeScheduledTranferAction = getExecuteScheduledTransferAction({
-    jobId: jobId,
+  const autoSaveAction = await getAutoSaveAction({
+    token: config.token,
+    amountReceived: 1,
   });
 
   const actions = [
     {
       type: "static" as const,
-      target: executeScheduledTranferAction.target,
-      value: Number(executeScheduledTranferAction.value),
-      callData: executeScheduledTranferAction.callData,
+      target: autoSaveAction.target,
+      value: Number(autoSaveAction.value),
+      callData: autoSaveAction.callData,
     },
   ];
 
-  const triggerData = {
-    cronExpression: "* * * * *",
-    startDate: startDate,
-  };
-
   const automation = await automationClient.createAutomation({
-    type: "time-based",
+    type: "event-based",
     data: {
       trigger: {
-        triggerData,
+        triggerData: {
+          query: "",
+        },
       },
       actions,
-      maxNumberOfExecutions: numberOfExecutions,
+      maxNumberOfExecutions: 10,
     },
   });
 
@@ -213,8 +188,15 @@ export default async function main({
     signature: formattedSignature,
   });
 
-  // wait for 10 seconds
-  await new Promise((resolve) => setTimeout(resolve, 10000));
+  // todo: send token
+  await smartAccountClient.sendTransaction({
+    to: config.token,
+    data: encodeFunctionData({
+      abi: parseAbi(["function mint(address to, uint256 amount) external"]),
+      functionName: "mint",
+      args: [safeAccount.address, BigInt(10)],
+    }),
+  });
 
   const automationLogs = await automationClient.getAutomationLogs(
     automation.id,
