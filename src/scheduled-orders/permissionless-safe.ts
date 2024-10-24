@@ -8,7 +8,7 @@ import {
   encode1271Hash,
   getScheduledOrdersExecutor,
   getSwapOrderData,
-  getExecuteScheduledOrderAction,
+  SCHEDULED_ORDERS_EXECUTOR_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -18,6 +18,7 @@ import {
   encodeFunctionData,
   http,
   parseAbi,
+  toFunctionSelector,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -162,16 +163,20 @@ export default async function main({
     validator: OWNABLE_VALIDATOR_ADDRESS,
   });
 
-  const executeScheduledOrderAction = getExecuteScheduledOrderAction({
-    jobId: jobId,
-  });
-
   const actions = [
     {
-      type: "static" as const,
-      target: executeScheduledOrderAction.target,
-      value: Number(executeScheduledOrderAction.value),
-      callData: executeScheduledOrderAction.callData,
+      type: "dynamic" as const,
+      target: SCHEDULED_ORDERS_EXECUTOR_ADDRESS,
+      value: 0,
+      callDataBuilderUrl: "",
+      functionSelector: toFunctionSelector(
+        "executeOrder(uint256 jobId,uint160 sqrtPriceLimitX96,uint256 amountOutMinimum,uint24 fee)",
+      ),
+      params: {
+        static: {
+          jobId,
+        },
+      },
     },
   ];
 

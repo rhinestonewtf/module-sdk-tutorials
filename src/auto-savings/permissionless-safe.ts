@@ -1,16 +1,13 @@
 import {
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
-  getScheduledTransferData,
-  getScheduledTransfersExecutor,
-  getExecuteScheduledTransferAction,
   OWNABLE_VALIDATOR_ADDRESS,
   getOwnableValidator,
   encode1271Signature,
   getAccount,
   encode1271Hash,
   getAutoSavingsExecutor,
-  getAutoSaveAction,
+  AUTO_SAVINGS_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -18,10 +15,9 @@ import {
   Chain,
   createPublicClient,
   encodeFunctionData,
-  encodePacked,
   http,
   parseAbi,
-  verifyMessage,
+  toFunctionSelector,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -32,7 +28,6 @@ import {
 } from "viem/account-abstraction";
 import { toSafeSmartAccount } from "permissionless/accounts";
 import { createAutomationClient } from "@rhinestone/automations-sdk";
-import { verifyHash } from "viem/actions";
 
 export default async function main({
   bundlerUrl,
@@ -134,17 +129,15 @@ export default async function main({
     validator: OWNABLE_VALIDATOR_ADDRESS,
   });
 
-  const autoSaveAction = await getAutoSaveAction({
-    token: config.token,
-    amountReceived: 1,
-  });
-
   const actions = [
     {
-      type: "static" as const,
-      target: autoSaveAction.target,
-      value: Number(autoSaveAction.value),
-      callData: autoSaveAction.callData,
+      type: "dynamic" as const,
+      target: AUTO_SAVINGS_ADDRESS,
+      value: 0,
+      callDataBuilderUrl: "",
+      functionSelector: toFunctionSelector(
+        "autoSave(address token,uint256 amountReceived,uint160 sqrtPriceLimitX96,uint256 amountOutMinimum,uint24 fee)",
+      ),
     },
   ];
 
