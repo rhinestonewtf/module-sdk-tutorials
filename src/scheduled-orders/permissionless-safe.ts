@@ -168,7 +168,8 @@ export default async function main({
       type: "dynamic" as const,
       target: SCHEDULED_ORDERS_EXECUTOR_ADDRESS,
       value: 0,
-      callDataBuilderUrl: "",
+      callDataBuilderUrl:
+        "https://calldata-builder-example.vercel.app/scheduled-orders/",
       functionSelector: toFunctionSelector(
         "executeOrder(uint256 jobId,uint160 sqrtPriceLimitX96,uint256 amountOutMinimum,uint24 fee)",
       ),

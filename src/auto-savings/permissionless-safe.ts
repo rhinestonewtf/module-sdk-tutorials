@@ -134,7 +134,8 @@ export default async function main({
       type: "dynamic" as const,
       target: AUTO_SAVINGS_ADDRESS,
       value: 0,
-      callDataBuilderUrl: "",
+      callDataBuilderUrl:
+        "https://calldata-builder-example.vercel.app/auto-savings/",
       functionSelector: toFunctionSelector(
         "autoSave(address token,uint256 amountReceived,uint160 sqrtPriceLimitX96,uint256 amountOutMinimum,uint24 fee)",
       ),
