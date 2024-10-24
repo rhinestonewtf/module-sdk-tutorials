@@ -9,6 +9,14 @@ import {
   encode1271Signature,
   getAccount,
   encode1271Hash,
+  getSmartSessionsValidator,
+  Session,
+  encodeValidationData,
+  SCHEDULED_TRANSFERS_EXECUTOR_ADDRESS,
+  getSudoPolicy,
+  SMART_SESSIONS_ADDRESS,
+  getPermissionId,
+  getTrustAttestersAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -18,6 +26,9 @@ import {
   encodeFunctionData,
   http,
   parseAbi,
+  toBytes,
+  toFunctionSelector,
+  toHex,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -62,7 +73,7 @@ export default async function main({
   const owner = privateKeyToAccount(generatePrivateKey());
 
   const ownableValidator = getOwnableValidator({
-    owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2", owner.address],
+    owners: [owner.address],
     threshold: 1,
   });
 
@@ -102,6 +113,62 @@ export default async function main({
       },
     },
   }).extend(erc7579Actions());
+
+  const trustAttestersAction = getTrustAttestersAction({
+    threshold: 1,
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
+    ],
+  });
+
+  const userOpHash1 = await smartAccountClient.sendUserOperation({
+    account: safeAccount,
+    calls: [
+      {
+        to: trustAttestersAction.target,
+        value: BigInt(0),
+        data: trustAttestersAction.callData,
+      },
+    ],
+  });
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: userOpHash1,
+  });
+
+  const session: Session = {
+    sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
+    sessionValidatorInitData: encodeValidationData({
+      threshold: 1,
+      owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2"],
+    }),
+    salt: toHex(toBytes("0", { size: 32 })),
+    userOpPolicies: [],
+    erc7739Policies: {
+      allowedERC7739Content: [],
+      erc1271Policies: [],
+    },
+    actions: [
+      {
+        actionTarget: SCHEDULED_TRANSFERS_EXECUTOR_ADDRESS,
+        actionTargetSelector: toFunctionSelector("executeOrder(uint256 jobId)"),
+        // todo: use universal action policy
+        actionPolicies: [getSudoPolicy()],
+      },
+    ],
+    chainId: BigInt(chain.id),
+  };
+
+  const smartSessions = getSmartSessionsValidator({
+    sessions: [session],
+  });
+
+  const opHash2 = await smartAccountClient.installModule(smartSessions);
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash2,
+  });
 
   const executeInterval = 60; // in seconds
   const numberOfExecutions = 2;
@@ -152,9 +219,9 @@ export default async function main({
     account: safeAccount.address,
     accountType: "SAFE",
     apiKey: automationsApiKey,
-    accountInitCode: "0x",
+    accountInitCode: "0x", // since the account is already deployed
     network: 11155111,
-    validator: OWNABLE_VALIDATOR_ADDRESS,
+    validator: SMART_SESSIONS_ADDRESS,
   });
 
   const executeScheduledTranferAction = getExecuteScheduledTransferAction({
@@ -183,6 +250,10 @@ export default async function main({
       },
       actions,
       maxNumberOfExecutions: numberOfExecutions,
+      // todo: fix this type issue
+      permissionId: getPermissionId({
+        session,
+      }),
     },
   });
 
