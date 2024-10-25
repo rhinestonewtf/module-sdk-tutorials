@@ -1,6 +1,6 @@
 services:
   anvil:
-    image: ghcr.io/foundry-rs/foundry:nightly-f6208d8db68f9acbe4ff8cd76958309efb61ea0b
+    image: ghcr.io/foundry-rs/foundry:nightly-25598999a2b33ac6ccfa35c347f3c98aba8e0061
     ports: ["8545:8545"]
     entrypoint:
       [
@@ -10,6 +10,8 @@ services:
         "--host",
         "0.0.0.0",
         "--silent",
+        "--hardfork",
+        "prague",
       ]
     platform: linux/x86_64
 
