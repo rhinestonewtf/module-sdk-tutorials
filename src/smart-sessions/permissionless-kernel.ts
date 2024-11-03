@@ -33,6 +33,7 @@ import {
   encodeFunctionData,
   parseAbi,
   encodeAbiParameters,
+  hashTypedData,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -340,11 +341,25 @@ export default async function main({
     clients: [publicClient],
   });
 
-  const hashToSign = encode1271Hash({
-    account,
-    chainId: chain.id,
-    validator: ownableValidator.address,
-    hash: sessionDetails.permissionEnableHash,
+  // const hashToSign = encode1271Hash({
+  //   account,
+  //   chainId: chain.id,
+  //   validator: ownableValidator.address,
+  //   hash: sessionDetails.permissionEnableHash,
+  // });
+
+  const hashToSign = hashTypedData({
+    domain: {
+      chainId: chain.id,
+      verifyingContract: account.address,
+    },
+    types: {
+      SafeMessage: [{ name: "hash", type: "bytes32" }],
+    },
+    primaryType: "SafeMessage",
+    message: {
+      hash: sessionDetails.permissionEnableHash,
+    },
   });
 
   sessionDetails.enableSessionData.enableSession.permissionEnableSig =
