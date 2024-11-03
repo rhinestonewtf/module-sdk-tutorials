@@ -1,6 +1,7 @@
 import { odysseyTestnet, sepolia } from "viem/chains";
 import { ensureBundlerIsReady, ensurePaymasterIsReady } from "./healthCheck";
 import smartSessionsPermissionlessSafe from "../src/smart-sessions/permissionless-safe";
+import smartSessionsPermissionlessKernel from "../src/smart-sessions/permissionless-kernel";
 import smartSessionsPermissionlessSafe7702 from "../src/smart-sessions/permissionless-safe-7702";
 import deadmanSwitchPermissionlessSafe from "../src/deadman-switch/permissionless-safe";
 import socialRecoveryPermissionlessSafe from "../src/social-recovery/permissionless-safe";
@@ -26,7 +27,7 @@ describe("Test erc7579 reference implementation", () => {
     // });
   }, 2000);
 
-  // it("should test smart sessions with permissionless", async () => {
+  // it("should test smart sessions with permissionless and safe", async () => {
   //   const receipt = await smartSessionsPermissionlessSafe({
   //     bundlerUrl,
   //     rpcUrl,
@@ -36,8 +37,8 @@ describe("Test erc7579 reference implementation", () => {
   //   expect(receipt.success).toBe(true);
   // }, 40000);
   //
-  it("should test smart sessions with permissionless and 7702", async () => {
-    const receipt = await smartSessionsPermissionlessSafe7702({
+  it("should test smart sessions with permissionless and kernel", async () => {
+    const receipt = await smartSessionsPermissionlessKernel({
       bundlerUrl,
       rpcUrl,
       paymasterUrl,
@@ -46,8 +47,18 @@ describe("Test erc7579 reference implementation", () => {
     expect(receipt.success).toBe(true);
   }, 40000);
 
+  // it("should test smart sessions with permissionless and 7702", async () => {
+  //   const receipt = await smartSessionsPermissionlessSafe7702({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
+
   //
-  // it("should test deadman switch with permissionless", async () => {
+  // it("should test deadman switch with permissionless and safe", async () => {
   //   const receipt = await deadmanSwitchPermissionlessSafe({
   //     bundlerUrl,
   //     rpcUrl,
@@ -57,7 +68,7 @@ describe("Test erc7579 reference implementation", () => {
   //   expect(receipt.success).toBe(true);
   // }, 40000);
   //
-  // it("should test social recovery with permissionless", async () => {
+  // it("should test social recovery with permissionless and safe", async () => {
   //   const receipt = await socialRecoveryPermissionlessSafe({
   //     bundlerUrl,
   //     rpcUrl,
@@ -67,7 +78,7 @@ describe("Test erc7579 reference implementation", () => {
   //   expect(receipt.success).toBe(true);
   // }, 40000);
   //
-  // it("should test social recovery with permissionless", async () => {
+  // it("should test social recovery with permissionless and safe", async () => {
   //   const receipt = await socialRecoveryZeroDevKernel({
   //     bundlerUrl,
   //     rpcUrl,
@@ -77,7 +88,7 @@ describe("Test erc7579 reference implementation", () => {
   //   expect(receipt.success).toBe(true);
   // }, 40000);
 
-  // it("should test scheduled transfers with permissionless", async () => {
+  // it("should test scheduled transfers with permissionless and safe", async () => {
   //   const logs = await scheduledTransfersPermissionlessSafe({
   //     bundlerUrl: `https://api.pimlico.io/v2/11155111/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
   //     rpcUrl: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -88,7 +99,7 @@ describe("Test erc7579 reference implementation", () => {
   //   // expect(receipt.success).toBe(true);
   // }, 200000);
   //
-  // it("should test scheduled orders with permissionless", async () => {
+  // it("should test scheduled orders with permissionless and safe", async () => {
   //   const logs = await scheduledOrdersPermissionlessSafe({
   //     bundlerUrl: `https://api.pimlico.io/v2/11155111/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
   //     rpcUrl: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -99,7 +110,7 @@ describe("Test erc7579 reference implementation", () => {
   //   // expect(receipt.success).toBe(true);
   // }, 200000);
   //
-  // it("should test auto savings with permissionless", async () => {
+  // it("should test auto savings with permissionless and safe", async () => {
   //   const logs = await autoSavingsPermissionlessSafe({
   //     bundlerUrl: `https://api.pimlico.io/v2/11155111/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
   //     rpcUrl: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -111,7 +122,7 @@ describe("Test erc7579 reference implementation", () => {
   // }, 200000);
   //
   // todo: figure out how to run this in jest
-  // it("should test webauhtn with permissionless", async () => {
+  // it("should test webauhtn with permissionless and safe", async () => {
   //   const receipt = await webauthnPermissionlessSafe({
   //     bundlerUrl,
   //     rpcUrl,
