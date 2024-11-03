@@ -26,15 +26,15 @@ describe("Test erc7579 reference implementation", () => {
     // });
   }, 2000);
 
-  // it("should test smart sessions with permissionless", async () => {
-  //   const receipt = await smartSessionsPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
-  //     chain: sepolia,
-  //   });
-  //   expect(receipt.success).toBe(true);
-  // }, 40000);
+  it("should test smart sessions with permissionless", async () => {
+    const receipt = await smartSessionsPermissionlessSafe({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+    expect(receipt.success).toBe(true);
+  }, 40000);
   //
   it("should test smart sessions with permissionless and 7702", async () => {
     const receipt = await smartSessionsPermissionlessSafe7702({
@@ -46,26 +46,25 @@ describe("Test erc7579 reference implementation", () => {
     expect(receipt.success).toBe(true);
   }, 40000);
 
-  //
-  // it("should test deadman switch with permissionless", async () => {
-  //   const receipt = await deadmanSwitchPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
-  //     chain: sepolia,
-  //   });
-  //   expect(receipt.success).toBe(true);
-  // }, 40000);
-  //
-  // it("should test social recovery with permissionless", async () => {
-  //   const receipt = await socialRecoveryPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
-  //     chain: sepolia,
-  //   });
-  //   expect(receipt.success).toBe(true);
-  // }, 40000);
+  it("should test deadman switch with permissionless", async () => {
+    const receipt = await deadmanSwitchPermissionlessSafe({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+    expect(receipt.success).toBe(true);
+  }, 40000);
+
+  it("should test social recovery with permissionless", async () => {
+    const receipt = await socialRecoveryPermissionlessSafe({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+    expect(receipt.success).toBe(true);
+  }, 40000);
   //
   // it("should test social recovery with permissionless", async () => {
   //   const receipt = await socialRecoveryZeroDevKernel({

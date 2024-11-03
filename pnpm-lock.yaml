@@ -22,10 +22,10 @@ importers:
         version: 0.1.25(viem@2.21.32(typescript@5.6.2))
       '@zerodev/ecdsa-validator':
         specifier: ^5.3.3
-        version: 5.3.3(@zerodev/sdk@5.3.20(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2)))(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
+        version: 5.3.3(@zerodev/sdk@5.3.20(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2)))(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
       '@zerodev/sdk':
         specifier: ^5.3.20
-        version: 5.3.20(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
+        version: 5.3.20(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
       crypto:
         specifier: ^1.0.1
         version: 1.0.1
@@ -36,8 +36,8 @@ importers:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.7.4)(ts-node@10.9.2(@types/node@22.7.4)(typescript@5.6.2))
       permissionless:
-        specifier: ^0.2.5
-        version: 0.2.5(viem@2.21.32(typescript@5.6.2))
+        specifier: ^0.2.14
+        version: 0.2.14(viem@2.21.32(typescript@5.6.2))
       ts-jest:
         specifier: ^29.2.5
         version: 29.2.5(@babel/core@7.25.2)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.25.2))(jest@29.7.0(@types/node@22.7.4)(ts-node@10.9.2(@types/node@22.7.4)(typescript@5.6.2)))(typescript@5.6.2)
@@ -1423,10 +1423,10 @@ packages:
   path-parse@1.0.7:
     resolution: {integrity: sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==}
 
-  permissionless@0.2.5:
-    resolution: {integrity: sha512-esgOgzJmjeJdBRTUdk5YwqYasnStSyWpV5WMPlQJ8A3I+fAZ4gfRwRh/ax3Ug4TxWwQgUT4HBa8rKmX9I0syJQ==}
+  permissionless@0.2.14:
+    resolution: {integrity: sha512-4/r4gf6uGE7WfFaE4tVBxNd+QSLh0cVMkhC6yHzPUBBBLgrPf+gcUZjLsTamSLFm81K+m13jq3IQ3J0ooenWhg==}
     peerDependencies:
-      viem: ^2.20.0
+      viem: ^2.21.22
 
   picocolors@1.1.0:
     resolution: {integrity: sha512-TQ92mBOW0l3LeMeyLV6mzy/kWr8lkd/hp3mTg7wYK7zJhuBStmGMBG0BdeDZS/dZx1IukaX6Bk11zcln25o1Aw==}
@@ -2418,15 +2418,15 @@ snapshots:
       '@typescript-eslint/types': 8.8.1
       eslint-visitor-keys: 3.4.3
 
-  '@zerodev/ecdsa-validator@5.3.3(@zerodev/sdk@5.3.20(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2)))(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))':
+  '@zerodev/ecdsa-validator@5.3.3(@zerodev/sdk@5.3.20(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2)))(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))':
     dependencies:
-      '@zerodev/sdk': 5.3.20(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
-      permissionless: 0.2.5(viem@2.21.32(typescript@5.6.2))
+      '@zerodev/sdk': 5.3.20(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))
+      permissionless: 0.2.14(viem@2.21.32(typescript@5.6.2))
       viem: 2.21.32(typescript@5.6.2)
 
-  '@zerodev/sdk@5.3.20(permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))':
+  '@zerodev/sdk@5.3.20(permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)))(viem@2.21.32(typescript@5.6.2))':
     dependencies:
-      permissionless: 0.2.5(viem@2.21.32(typescript@5.6.2))
+      permissionless: 0.2.14(viem@2.21.32(typescript@5.6.2))
       semver: 7.6.3
       viem: 2.21.32(typescript@5.6.2)
 
@@ -3440,7 +3440,7 @@ snapshots:
 
   path-parse@1.0.7: {}
 
-  permissionless@0.2.5(viem@2.21.32(typescript@5.6.2)):
+  permissionless@0.2.14(viem@2.21.32(typescript@5.6.2)):
     dependencies:
       viem: 2.21.32(typescript@5.6.2)
 
