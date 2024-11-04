@@ -34,6 +34,10 @@ import {
   parseAbi,
   encodeAbiParameters,
   hashTypedData,
+  domainSeparator,
+  keccak256,
+  stringToHex,
+  concatHex,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -263,6 +267,17 @@ export default async function main({
     account,
   });
 
+  ownableValidator.initData = encodePacked(
+    ["address", "bytes"],
+    [
+      zeroAddress,
+      encodeAbiParameters(
+        [{ type: "bytes" }, { type: "bytes" }, { type: "bytes" }],
+        [ownableValidator.initData, "0x", "0xe9ae5c53"],
+      ),
+    ],
+  );
+
   const opHash = await smartAccountClient.installModule(ownableValidator);
 
   await pimlicoClient.waitForUserOperationReceipt({
@@ -298,7 +313,7 @@ export default async function main({
           functionName: "changeRootValidator",
           args: [
             "0x012483DA3A338895199E5e538530213157e931Bf06",
-            zeroAddress,
+            "0x0000000000000000000000000000000000000001",
             "0x",
             "0x",
           ],
@@ -348,23 +363,46 @@ export default async function main({
   //   hash: sessionDetails.permissionEnableHash,
   // });
 
-  const hashToSign = hashTypedData({
+  // const hashToSign = hashTypedData({
+  //   domain: {
+  //     chainId: chain.id,
+  //     verifyingContract: account.address,
+  //     name: "Kernel",
+  //     version: "0.3.1",
+  //   },
+  //   types: {
+  //     SafeMessage: [{ name: "hash", type: "bytes32" }],
+  //   },
+  //   primaryType: "SafeMessage",
+  //   message: {
+  //     hash: sessionDetails.permissionEnableHash,
+  //   },
+  // });
+
+  const _domainSeparator = domainSeparator({
     domain: {
+      name: "Kernel",
+      version: "0.3.1",
       chainId: chain.id,
       verifyingContract: account.address,
     },
-    types: {
-      SafeMessage: [{ name: "hash", type: "bytes32" }],
-    },
-    primaryType: "SafeMessage",
-    message: {
-      hash: sessionDetails.permissionEnableHash,
-    },
   });
+  const wrappedMessageHash = keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "bytes32" }],
+      [
+        keccak256(stringToHex("Kernel(bytes32 hash)")),
+        sessionDetails.permissionEnableHash,
+      ],
+    ),
+  );
+  const digest = keccak256(
+    concatHex(["0x1901", _domainSeparator, wrappedMessageHash]),
+  );
 
   sessionDetails.enableSessionData.enableSession.permissionEnableSig =
     await owner.signMessage({
-      message: { raw: hashToSign },
+      message: { raw: digest },
     });
 
   const nonce = await getAccountNonce(publicClient, {
