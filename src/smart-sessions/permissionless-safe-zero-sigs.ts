@@ -14,7 +14,14 @@ import {
   SmartSessionMode,
   getPermissionId,
 } from "@rhinestone/module-sdk";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  generatePrivateKey,
+  privateKeyToAccount,
+  signMessage,
+  signTransaction,
+  signTypedData,
+  toAccount,
+} from "viem/accounts";
 import {
   toHex,
   Address,
@@ -23,6 +30,9 @@ import {
   http,
   Chain,
   toBytes,
+  keccak256,
+  getAddress,
+  slice,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -64,7 +74,26 @@ export default async function main({
     transport: http(paymasterUrl),
   });
 
-  const owner = privateKeyToAccount(generatePrivateKey());
+  // here we create a random owner without a private key to show that using the users private key is not required at all in this step
+  const randomAddressString = (Math.random() + 1).toString(36).substring(7);
+  const owner = toAccount({
+    address: getAddress(slice(keccak256(toHex(randomAddressString)), 0, 20)),
+
+    // eslint-disable-next-line
+    async signMessage({ message }) {
+      return "0x00";
+    },
+
+    // eslint-disable-next-line
+    async signTransaction(transaction) {
+      return "0x00";
+    },
+
+    // eslint-disable-next-line
+    async signTypedData(typedData) {
+      return "0x00";
+    },
+  });
 
   const ownableValidator = getOwnableValidator({
     owners: [owner.address],
