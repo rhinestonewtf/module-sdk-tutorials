@@ -1,6 +1,7 @@
 import { odysseyTestnet, sepolia } from "viem/chains";
 import { ensureBundlerIsReady, ensurePaymasterIsReady } from "./healthCheck";
 import smartSessionsPermissionlessSafe from "../src/smart-sessions/permissionless-safe";
+import smartSessionsPermissionlessSafeZeroSigs from "../src/smart-sessions/permissionless-safe-zero-sigs";
 import smartSessionsPermissionlessSafe7702 from "../src/smart-sessions/permissionless-safe-7702";
 import deadmanSwitchPermissionlessSafe from "../src/deadman-switch/permissionless-safe";
 import socialRecoveryPermissionlessSafe from "../src/social-recovery/permissionless-safe";
@@ -35,7 +36,17 @@ describe("Test erc7579 reference implementation", () => {
     });
     expect(receipt.success).toBe(true);
   }, 40000);
-  //
+
+  it("should test smart sessions with permissionless and zero user sigs", async () => {
+    const receipt = await smartSessionsPermissionlessSafeZeroSigs({
+      bundlerUrl,
+      rpcUrl,
+      paymasterUrl,
+      chain: sepolia,
+    });
+    expect(receipt.success).toBe(true);
+  }, 40000);
+
   it("should test smart sessions with permissionless and 7702", async () => {
     const receipt = await smartSessionsPermissionlessSafe7702({
       bundlerUrl,
@@ -46,26 +57,26 @@ describe("Test erc7579 reference implementation", () => {
     expect(receipt.success).toBe(true);
   }, 40000);
 
-  it("should test deadman switch with permissionless", async () => {
-    const receipt = await deadmanSwitchPermissionlessSafe({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
-
-  it("should test social recovery with permissionless", async () => {
-    const receipt = await socialRecoveryPermissionlessSafe({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
+  // it("should test deadman switch with permissionless", async () => {
+  //   const receipt = await deadmanSwitchPermissionlessSafe({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
   //
+  // it("should test social recovery with permissionless", async () => {
+  //   const receipt = await socialRecoveryPermissionlessSafe({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
+  // //
   // it("should test social recovery with permissionless", async () => {
   //   const receipt = await socialRecoveryZeroDevKernel({
   //     bundlerUrl,

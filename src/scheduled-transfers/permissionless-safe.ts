@@ -16,7 +16,6 @@ import {
   getSudoPolicy,
   SMART_SESSIONS_ADDRESS,
   getPermissionId,
-  getTrustAttestersAction,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -111,29 +110,6 @@ export default async function main({
       },
     },
   }).extend(erc7579Actions());
-
-  const trustAttestersAction = getTrustAttestersAction({
-    threshold: 1,
-    attesters: [
-      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
-      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
-    ],
-  });
-
-  const userOpHash1 = await smartAccountClient.sendUserOperation({
-    account: safeAccount,
-    calls: [
-      {
-        to: trustAttestersAction.target,
-        value: BigInt(0),
-        data: trustAttestersAction.callData,
-      },
-    ],
-  });
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: userOpHash1,
-  });
 
   const session: Session = {
     sessionValidator: OWNABLE_VALIDATOR_ADDRESS,

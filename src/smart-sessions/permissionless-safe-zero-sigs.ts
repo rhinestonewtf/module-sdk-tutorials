@@ -11,7 +11,8 @@ import {
   encodeValidatorNonce,
   getOwnableValidator,
   encodeValidationData,
-  getEnableSessionDetails,
+  SmartSessionMode,
+  getPermissionId,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -34,6 +35,7 @@ import {
 import { toSafeSmartAccount } from "permissionless/accounts";
 import { getAccountNonce } from "permissionless/actions";
 
+// This example is similar to /smart-sessions/permissionless-safe.ts, but with zero user signatures when creating a new account for the user
 export default async function main({
   bundlerUrl,
   rpcUrl,
@@ -69,49 +71,6 @@ export default async function main({
     threshold: 1,
   });
 
-  const safeAccount = await toSafeSmartAccount({
-    client: publicClient,
-    owners: [owner],
-    version: "1.4.1",
-    entryPoint: {
-      address: entryPoint07Address,
-      version: "0.7",
-    },
-    safe4337ModuleAddress: "0x7579EE8307284F293B1927136486880611F20002",
-    erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
-    attesters: [
-      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
-      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
-    ],
-    attestersThreshold: 1,
-    validators: [
-      {
-        address: ownableValidator.address,
-        context: ownableValidator.initData,
-      },
-    ],
-  });
-
-  const smartAccountClient = createSmartAccountClient({
-    account: safeAccount,
-    chain: chain,
-    bundlerTransport: http(bundlerUrl),
-    paymaster: paymasterClient,
-    userOperation: {
-      estimateFeesPerGas: async () => {
-        return (await pimlicoClient.getUserOperationGasPrice()).fast;
-      },
-    },
-  }).extend(erc7579Actions());
-
-  const smartSessions = getSmartSessionsValidator({});
-
-  const opHash = await smartAccountClient.installModule(smartSessions);
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash,
-  });
-
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
   const session: Session = {
@@ -136,34 +95,68 @@ export default async function main({
     chainId: BigInt(chain.id),
   };
 
-  const account = getAccount({
-    address: safeAccount.address,
-    type: "safe",
-  });
-
-  const sessionDetails = await getEnableSessionDetails({
+  const smartSessions = getSmartSessionsValidator({
     sessions: [session],
-    account,
-    clients: [publicClient],
   });
 
-  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
-    await owner.signMessage({
-      message: { raw: sessionDetails.permissionEnableHash },
-    });
+  const safeAccount = await toSafeSmartAccount({
+    client: publicClient,
+    owners: [owner],
+    version: "1.4.1",
+    entryPoint: {
+      address: entryPoint07Address,
+      version: "0.7",
+    },
+    safe4337ModuleAddress: "0x7579EE8307284F293B1927136486880611F20002",
+    erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
+    ],
+    attestersThreshold: 1,
+    validators: [
+      {
+        address: ownableValidator.address,
+        context: ownableValidator.initData,
+      },
+      {
+        address: smartSessions.address,
+        context: smartSessions.initData,
+      },
+    ],
+  });
+
+  const smartAccountClient = createSmartAccountClient({
+    account: safeAccount,
+    chain: chain,
+    bundlerTransport: http(bundlerUrl),
+    paymaster: paymasterClient,
+    userOperation: {
+      estimateFeesPerGas: async () => {
+        return (await pimlicoClient.getUserOperationGasPrice()).fast;
+      },
+    },
+  }).extend(erc7579Actions());
 
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
     key: encodeValidatorNonce({
-      account,
+      account: getAccount({
+        address: safeAccount.address,
+        type: "safe",
+      }),
       validator: smartSessions,
     }),
   });
 
-  sessionDetails.signature = getOwnableValidatorMockSignature({
-    threshold: 1,
-  });
+  const sessionDetails = {
+    mode: SmartSessionMode.USE,
+    permissionId: getPermissionId({ session }),
+    signature: getOwnableValidatorMockSignature({
+      threshold: 1,
+    }),
+  };
 
   const userOperation = await smartAccountClient.prepareUserOperation({
     account: safeAccount,
