@@ -17,9 +17,6 @@ import {
 import {
   generatePrivateKey,
   privateKeyToAccount,
-  signMessage,
-  signTransaction,
-  signTypedData,
   toAccount,
 } from "viem/accounts";
 import {
