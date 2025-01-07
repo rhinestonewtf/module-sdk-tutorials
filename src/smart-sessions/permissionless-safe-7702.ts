@@ -91,7 +91,7 @@ export default async function main({
       owners: [sessionOwner.address],
     }),
     salt: toHex(toBytes("0", { size: 32 })),
-    userOpPolicies: [],
+    userOpPolicies: [getSudoPolicy()],
     erc7739Policies: {
       allowedERC7739Content: [],
       erc1271Policies: [],
@@ -104,6 +104,7 @@ export default async function main({
       },
     ],
     chainId: BigInt(chain.id),
+    permitERC4337Paymaster: true,
   };
 
   const smartSessions = getSmartSessionsValidator({
