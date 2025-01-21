@@ -29,11 +29,12 @@ import {
   getOrderBundleHash,
   getTokenAddress,
   MetaIntent,
+  ORCHESTRATOR_URL,
   SignedOrderBundle,
 } from "@rhinestone/orchestrator-sdk";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
-import { getAccountNonce } from "permissionless/actions/public/getAccountNonce";
+import { getAccountNonce } from "permissionless/actions";
 
 export default async function main({
   sourceChain,
@@ -71,7 +72,7 @@ export default async function main({
     },
   });
 
-  const safeAccount = await toSafeSmartAccount({
+  const sourceSafeAccount = await toSafeSmartAccount({
     client: sourcePublicClient,
     owners: [owner],
     version: "1.4.1",
@@ -83,6 +84,7 @@ export default async function main({
     erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
     attesters: [
       RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      "0x8a310b9085faF5d9464D84C3d9a7BE3b28c94531", // Mock attester for omni account
     ],
     attestersThreshold: 1,
     validators: [
@@ -93,18 +95,18 @@ export default async function main({
     ],
     executors: [
       {
-        address: ACCOUNT_LOCKER_SOURCE_EXECUTOR,
+        address: "0xE1058634834E01038CadbaE8208BFfF81B1Ede51",
         context: "0x",
       },
       {
-        address: ACCOUNT_LOCKER_TARGET_EXECUTOR,
+        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
         context: "0x",
       },
     ],
   });
 
   const sourceSmartAccountClient = createSmartAccountClient({
-    account: safeAccount,
+    account: sourceSafeAccount,
     chain: sourceChain,
     bundlerTransport: http(
       `https://api.pimlico.io/v2/${sourceChain.id}/rpc?apikey=${pimlicoApiKey}`,
@@ -121,19 +123,31 @@ export default async function main({
   const orchestrator = getOrchestrator(orchestratorApiKey);
 
   // create a new user on orchestrator
-  const userId = await orchestrator.createUserAccount(safeAccount.address, [
-    8453,
-  ]);
+  const userId = await orchestrator.createUserAccount(
+    sourceSafeAccount.address,
+    [sourceChain.id, targetChain.id],
+  );
 
   // fund the smart account
   // todo
 
   // install the hook on source chain
-  const opHash = await sourceSmartAccountClient.installModule(
-    getAccountLockerHook({
-      isOmniMode: true,
-    }),
-  );
+  const opHash = await sourceSmartAccountClient.installModule({
+    address: "0x29BDcBc36e344061393f8AB58D2D6AABaedeAaAE",
+    initData: encodeAbiParameters(
+      [
+        { name: "hookType", type: "uint256" },
+        { name: "hookId", type: "bytes4" },
+        { name: "data", type: "bytes" },
+      ],
+      [
+        0n,
+        "0x00000000",
+        encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+      ],
+    ),
+    type: "hook",
+  });
 
   await sourcePimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
@@ -155,6 +169,53 @@ export default async function main({
     },
   });
 
+  const targetSafeAccount = await toSafeSmartAccount({
+    client: targetPublicClient,
+    owners: [owner],
+    version: "1.4.1",
+    entryPoint: {
+      address: entryPoint07Address,
+      version: "0.7",
+    },
+    safe4337ModuleAddress: "0x7579EE8307284F293B1927136486880611F20002",
+    erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      "0x8a310b9085faF5d9464D84C3d9a7BE3b28c94531", // Mock attester for omni account
+    ],
+    attestersThreshold: 1,
+    validators: [
+      {
+        address: ownableValidator.address,
+        context: ownableValidator.initData,
+      },
+    ],
+    executors: [
+      {
+        address: "0xE1058634834E01038CadbaE8208BFfF81B1Ede51",
+        context: "0x",
+      },
+      {
+        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
+        context: "0x",
+      },
+    ],
+  });
+
+  const targetSmartAccountClient = createSmartAccountClient({
+    account: targetSafeAccount,
+    chain: targetChain,
+    bundlerTransport: http(
+      `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
+    ),
+    paymaster: targetPimlicoClient,
+    userOperation: {
+      estimateFeesPerGas: async () => {
+        return (await targetPimlicoClient.getUserOperationGasPrice()).fast;
+      },
+    },
+  }).extend(erc7579Actions());
+
   // construct a token transfer
   const tokenTransfers = [
     {
@@ -165,7 +226,7 @@ export default async function main({
 
   // create the userOperation
   const nonce = await getAccountNonce(targetPublicClient, {
-    address: safeAccount.address,
+    address: targetSafeAccount.address,
     entryPointAddress: entryPoint07Address,
     key: BigInt(
       pad(ownableValidator.address, {
@@ -179,13 +240,19 @@ export default async function main({
   const balanceSlot = keccak256(
     encodeAbiParameters(
       [{ type: "address" }, { type: "uint256" }],
-      [safeAccount.address, 9n],
+      [targetSafeAccount.address, 9n],
     ),
   );
 
-  const userOp = await targetPimlicoClient.prepareUserOperation({
-    account: safeAccount,
-    calls: [],
+  const userOp = await targetSmartAccountClient.prepareUserOperation({
+    account: targetSafeAccount,
+    calls: [
+      {
+        to: "0x19575934a9542be941d3206f3ecff4a5ffb9af88",
+        value: BigInt(0),
+        data: "0xd09de08a",
+      },
+    ],
     nonce: nonce,
     signature: getOwnableValidatorMockSignature({ threshold: 1 }),
     stateOverride: [
@@ -207,7 +274,7 @@ export default async function main({
   // sign the userOperation
   const userOpHash = getUserOperationHash({
     userOperation: userOp,
-    chainId: chain.id,
+    chainId: targetChain.id,
     entryPointAddress: entryPoint07Address,
     entryPointVersion: "0.7",
   });
@@ -217,47 +284,60 @@ export default async function main({
 
   // create the meta intent
   const metaIntent: MetaIntent = {
-    targetChainId: 8453, // Base
+    targetChainId: targetChain.id,
     tokenTransfers: tokenTransfers,
-    targetAccount: safeAccount.address,
+    targetAccount: targetSafeAccount.address,
     targetExecutions: [],
     userOp: toPackedUserOperation(userOp),
   };
 
-  const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
-    metaIntent,
-    userId,
-  );
+  const orderPath = await fetch(
+    `${ORCHESTRATOR_URL}/users/${userId}/bundles/path`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": orchestratorApiKey,
+      },
+      body: JSON.stringify(metaIntent),
+    },
+  ).then((res) => res.json());
+
+  // const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
+  //   metaIntent,
+  //   userId,
+  // );
+  console.log(orderPath);
 
   // sign the meta intent
-  const orderBundleHash = await getOrderBundleHash(orderBundle);
-
-  const bundleSignature = await owner.signMessage({
-    message: { raw: orderBundleHash },
-  });
-  const packedSig = encodePacked(
-    ["address", "bytes"],
-    [ownableValidator.address, bundleSignature],
-  );
-
-  const signedOrderBundle: SignedOrderBundle = {
-    ...orderBundle,
-    acrossTransfers: orderBundle.acrossTransfers.map((transfer) => ({
-      ...transfer,
-      userSignature: packedSig,
-    })),
-    targetExecutionSignature:
-      orderBundle.userOp.sender !== zeroAddress ? "0x" : packedSig,
-    userOp: orderBundle.userOp,
-  };
-
-  // send the signed bundle
-  const bundleId = await orchestrator.postSignedOrderBundle(
-    signedOrderBundle,
-    userId,
-  );
-
-  // check bundle status
-  const bundleStatus = await orchestrator.getBundleStatus(userId, bundleId);
-  return bundleStatus;
+  // const orderBundleHash = await getOrderBundleHash(orderBundle);
+  //
+  // const bundleSignature = await owner.signMessage({
+  //   message: { raw: orderBundleHash },
+  // });
+  // const packedSig = encodePacked(
+  //   ["address", "bytes"],
+  //   [ownableValidator.address, bundleSignature],
+  // );
+  //
+  // const signedOrderBundle: SignedOrderBundle = {
+  //   ...orderBundle,
+  //   acrossTransfers: orderBundle.acrossTransfers.map((transfer: any) => ({
+  //     ...transfer,
+  //     userSignature: packedSig,
+  //   })),
+  //   targetExecutionSignature:
+  //     orderBundle.userOp.sender !== zeroAddress ? "0x" : packedSig,
+  //   userOp: orderBundle.userOp,
+  // };
+  //
+  // // send the signed bundle
+  // const bundleId = await orchestrator.postSignedOrderBundle(
+  //   signedOrderBundle,
+  //   userId,
+  // );
+  //
+  // // check bundle status
+  // const bundleStatus = await orchestrator.getBundleStatus(userId, bundleId);
+  // return bundleStatus;
 }

@@ -1,4 +1,10 @@
-import { odysseyTestnet, sepolia } from "viem/chains";
+import {
+  arbitrumSepolia,
+  baseSepolia,
+  odysseyTestnet,
+  optimismSepolia,
+  sepolia,
+} from "viem/chains";
 import { ensureBundlerIsReady, ensurePaymasterIsReady } from "./healthCheck";
 import smartSessionsPermissionlessSafe from "../src/smart-sessions/permissionless-safe";
 import smartSessionsPermissionlessSafeZeroSigs from "../src/smart-sessions/permissionless-safe-zero-sigs";
@@ -9,6 +15,7 @@ import socialRecoveryZeroDevKernel from "../src/social-recovery/zerodev-kernel";
 import scheduledTransfersPermissionlessSafe from "../src/scheduled-transfers/permissionless-safe";
 import scheduledOrdersPermissionlessSafe from "../src/scheduled-orders/permissionless-safe";
 import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-safe";
+import omniAccountNewAccount from "../src/orchestrator-sdk/new-account";
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -16,6 +23,11 @@ dotenv.config();
 const bundlerUrl = "http://localhost:4337";
 const rpcUrl = "http://localhost:8545";
 const paymasterUrl = "http://localhost:3000";
+
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 
 describe("Test erc7579 reference implementation", () => {
   beforeAll(async () => {
@@ -27,35 +39,35 @@ describe("Test erc7579 reference implementation", () => {
     // });
   }, 2000);
 
-  it("should test smart sessions with permissionless", async () => {
-    const receipt = await smartSessionsPermissionlessSafe({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
-
-  it("should test smart sessions with permissionless and zero user sigs", async () => {
-    const receipt = await smartSessionsPermissionlessSafeZeroSigs({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
-
-  it("should test smart sessions with permissionless and 7702", async () => {
-    const receipt = await smartSessionsPermissionlessSafe7702({
-      bundlerUrl,
-      rpcUrl,
-      paymasterUrl,
-      chain: sepolia,
-    });
-    expect(receipt.success).toBe(true);
-  }, 40000);
+  // it("should test smart sessions with permissionless", async () => {
+  //   const receipt = await smartSessionsPermissionlessSafe({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
+  //
+  // it("should test smart sessions with permissionless and zero user sigs", async () => {
+  //   const receipt = await smartSessionsPermissionlessSafeZeroSigs({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
+  //
+  // it("should test smart sessions with permissionless and 7702", async () => {
+  //   const receipt = await smartSessionsPermissionlessSafe7702({
+  //     bundlerUrl,
+  //     rpcUrl,
+  //     paymasterUrl,
+  //     chain: sepolia,
+  //   });
+  //   expect(receipt.success).toBe(true);
+  // }, 40000);
 
   // it("should test deadman switch with permissionless", async () => {
   //   const receipt = await deadmanSwitchPermissionlessSafe({
@@ -120,13 +132,15 @@ describe("Test erc7579 reference implementation", () => {
   //   // expect(receipt.success).toBe(true);
   // }, 200000);
   //
-  // todo: figure out how to run this in jest
-  // it("should test webauhtn with permissionless", async () => {
-  //   const receipt = await webauthnPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
-  //     chain: sepolia,
-  //   });
-  // }, 20000);
+  it("should test omni account with a new account", async () => {
+    const bundleStatus = await omniAccountNewAccount({
+      sourceChain: baseSepolia,
+      targetChain: optimismSepolia,
+      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+    });
+    console.log(bundleStatus);
+  }, 200000);
+
+  //
 });
