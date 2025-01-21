@@ -9,13 +9,6 @@ import {
   encode1271Signature,
   getAccount,
   encode1271Hash,
-  getSmartSessionsValidator,
-  Session,
-  encodeValidationData,
-  SCHEDULED_TRANSFERS_EXECUTOR_ADDRESS,
-  getSudoPolicy,
-  SMART_SESSIONS_ADDRESS,
-  getPermissionId,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -25,9 +18,6 @@ import {
   encodeFunctionData,
   http,
   parseAbi,
-  toBytes,
-  toFunctionSelector,
-  toHex,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -72,7 +62,7 @@ export default async function main({
   const owner = privateKeyToAccount(generatePrivateKey());
 
   const ownableValidator = getOwnableValidator({
-    owners: [owner.address],
+    owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2", owner.address],
     threshold: 1,
   });
 
@@ -111,39 +101,6 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
-  const session: Session = {
-    sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
-    sessionValidatorInitData: encodeValidationData({
-      threshold: 1,
-      owners: ["0x2DC2fb2f4F11DeE1d6a2054ffCBf102D09b62bE2"],
-    }),
-    salt: toHex(toBytes("0", { size: 32 })),
-    userOpPolicies: [],
-    erc7739Policies: {
-      allowedERC7739Content: [],
-      erc1271Policies: [],
-    },
-    actions: [
-      {
-        actionTarget: SCHEDULED_TRANSFERS_EXECUTOR_ADDRESS,
-        actionTargetSelector: toFunctionSelector("executeOrder(uint256 jobId)"),
-        // todo: use universal action policy
-        actionPolicies: [getSudoPolicy()],
-      },
-    ],
-    chainId: BigInt(chain.id),
-  };
-
-  const smartSessions = getSmartSessionsValidator({
-    sessions: [session],
-  });
-
-  const opHash2 = await smartAccountClient.installModule(smartSessions);
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash2,
-  });
-
   const executeInterval = 60; // in seconds
   const numberOfExecutions = 2;
   const startDate = Date.now(); // UNIX timestamp
@@ -173,9 +130,6 @@ export default async function main({
 
   const opHash = await smartAccountClient.installModule(scheduledTransfers);
 
-  // todo: get jobId
-  const jobId = 0;
-
   await pimlicoClient.waitForUserOperationReceipt({
     hash: opHash,
   });
@@ -193,17 +147,14 @@ export default async function main({
     account: safeAccount.address,
     accountType: "SAFE",
     apiKey: automationsApiKey,
-    accountInitCode: "0x", // since the account is already deployed
+    accountInitCode: "0x",
     network: 11155111,
     // @ts-ignore
-    validator: SMART_SESSIONS_ADDRESS,
-    permissionId: getPermissionId({
-      session,
-    }),
+    validator: ownableValidator,
   });
 
   const executeScheduledTranferAction = getExecuteScheduledTransferAction({
-    jobId: jobId,
+    jobId: 0, // since this is our first automation on the module
   });
 
   const actions = [
@@ -257,13 +208,9 @@ export default async function main({
     automationId: automation.id,
     signature: formattedSignature,
   });
-
-  // wait for 10 seconds
   await new Promise((resolve) => setTimeout(resolve, 10000));
 
   const automationLogs = await automationClient.getAutomationLogs(
     automation.id,
   );
-
-  return automationLogs;
 }
