@@ -18,8 +18,11 @@ importers:
         specifier: ^0.0.3
         version: 0.0.3(viem@2.21.51(typescript@5.6.2))
       '@rhinestone/module-sdk':
-        specifier: ^0.2.0
-        version: 0.2.0(viem@2.21.51(typescript@5.6.2))
+        specifier: ^0.2.3
+        version: 0.2.3(viem@2.21.51(typescript@5.6.2))
+      '@rhinestone/orchestrator-sdk':
+        specifier: ^0.1.10
+        version: 0.1.10(viem@2.21.51(typescript@5.6.2))
       '@zerodev/ecdsa-validator':
         specifier: ^5.3.3
         version: 5.3.3(@zerodev/sdk@5.3.20(permissionless@0.2.22(viem@2.21.51(typescript@5.6.2))(webauthn-p256@0.0.10))(viem@2.21.51(typescript@5.6.2)))(permissionless@0.2.22(viem@2.21.51(typescript@5.6.2))(webauthn-p256@0.0.10))(viem@2.21.51(typescript@5.6.2))
@@ -423,10 +426,15 @@ packages:
     peerDependencies:
       viem: ^2.17.8
 
-  '@rhinestone/module-sdk@0.2.0':
-    resolution: {integrity: sha512-n2VR+uH9PtnUuNKz4/rNBVFu/ZC/kMOp2LsrQa20o8wCYxetZYceatFZ5o4YTDpCaTi6YZUm6+UYK5qtkVWt5A==}
+  '@rhinestone/module-sdk@0.2.3':
+    resolution: {integrity: sha512-YbwK0R6N2ApxHJNYPGx1HsRXmMtLxOrn3GYxXvOeYPVjiY13kHIxq+1XfzLFwAwIT7DKpprg0mY5s6YuUpByGA==}
     peerDependencies:
       viem: ^2.0.0
+
+  '@rhinestone/orchestrator-sdk@0.1.10':
+    resolution: {integrity: sha512-q5BclztcSZhCt6anuIWoyS7xXMOvDTlUrYs1aUvOHHFNRl1UsVHEWvPDCyr6iYLjqFLG7o+9hv3w5s28hM2nEA==}
+    peerDependencies:
+      viem: ^2.17.8
 
   '@scure/base@1.1.9':
     resolution: {integrity: sha512-8YKhl8GHiNI/pU2VMaofa2Tor7PJRAjwQLBBuilkJ9L5+13yVbC7JO/wS7piioAvPSwR3JKM1IJ/u4xQzbcXKg==}
@@ -2256,10 +2264,14 @@ snapshots:
     dependencies:
       viem: 2.21.51(typescript@5.6.2)
 
-  '@rhinestone/module-sdk@0.2.0(viem@2.21.51(typescript@5.6.2))':
+  '@rhinestone/module-sdk@0.2.3(viem@2.21.51(typescript@5.6.2))':
     dependencies:
       solady: 0.0.235
       tslib: 2.7.0
+      viem: 2.21.51(typescript@5.6.2)
+
+  '@rhinestone/orchestrator-sdk@0.1.10(viem@2.21.51(typescript@5.6.2))':
+    dependencies:
       viem: 2.21.51(typescript@5.6.2)
 
   '@scure/base@1.1.9': {}
