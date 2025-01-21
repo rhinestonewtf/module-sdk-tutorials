@@ -18,6 +18,7 @@ import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-sa
 import omniAccountNewAccount from "../src/orchestrator-sdk/new-account";
 
 import * as dotenv from "dotenv";
+import { Hex } from "viem";
 dotenv.config();
 
 const bundlerUrl = "http://localhost:4337";
@@ -138,6 +139,7 @@ describe("Test erc7579 reference implementation", () => {
       targetChain: optimismSepolia,
       orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
       pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
     });
     console.log(bundleStatus);
   }, 200000);

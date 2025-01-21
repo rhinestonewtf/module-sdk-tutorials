@@ -11,8 +11,12 @@ import { toSafeSmartAccount } from "permissionless/accounts";
 import {
   Chain,
   createPublicClient,
+  createWalletClient,
   encodeAbiParameters,
+  encodeFunctionData,
   encodePacked,
+  erc20Abi,
+  Hex,
   http,
   keccak256,
   pad,
@@ -41,11 +45,13 @@ export default async function main({
   targetChain,
   orchestratorApiKey,
   pimlicoApiKey,
+  fundingPrivateKey,
 }: {
   sourceChain: Chain;
   targetChain: Chain;
   orchestratorApiKey: string;
   pimlicoApiKey: string;
+  fundingPrivateKey: Hex;
 }) {
   // create a new smart account
   const owner = privateKeyToAccount(generatePrivateKey());
@@ -129,7 +135,25 @@ export default async function main({
   );
 
   // fund the smart account
-  // todo
+  const fundingAccount = privateKeyToAccount(fundingPrivateKey);
+  const sourceWalletClient = createWalletClient({
+    chain: sourceChain,
+    transport: http(),
+  });
+
+  const fundingTxHash = await sourceWalletClient.sendTransaction({
+    account: fundingAccount,
+    to: getTokenAddress("USDC", sourceChain.id),
+    data: encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [sourceSafeAccount.address, 1n],
+    }),
+  });
+
+  await sourcePublicClient.waitForTransactionReceipt({
+    hash: fundingTxHash,
+  });
 
   // install the hook on source chain
   const opHash = await sourceSmartAccountClient.installModule({
@@ -220,7 +244,7 @@ export default async function main({
   const tokenTransfers = [
     {
       tokenAddress: getTokenAddress("USDC", targetChain.id),
-      amount: 10n,
+      amount: 1n,
     },
   ];
 
@@ -248,9 +272,12 @@ export default async function main({
     account: targetSafeAccount,
     calls: [
       {
-        to: "0x19575934a9542be941d3206f3ecff4a5ffb9af88",
-        value: BigInt(0),
-        data: "0xd09de08a",
+        to: getTokenAddress("USDC", targetChain.id),
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 1n],
+        }),
       },
     ],
     nonce: nonce,
@@ -291,7 +318,7 @@ export default async function main({
     userOp: toPackedUserOperation(userOp),
   };
 
-  const orderPath = await fetch(
+  const { orderBundle, injectedExecutions } = await fetch(
     `${ORCHESTRATOR_URL}/users/${userId}/bundles/path`,
     {
       method: "POST",
@@ -307,37 +334,36 @@ export default async function main({
   //   metaIntent,
   //   userId,
   // );
-  console.log(orderPath);
 
   // sign the meta intent
-  // const orderBundleHash = await getOrderBundleHash(orderBundle);
-  //
-  // const bundleSignature = await owner.signMessage({
-  //   message: { raw: orderBundleHash },
-  // });
-  // const packedSig = encodePacked(
-  //   ["address", "bytes"],
-  //   [ownableValidator.address, bundleSignature],
-  // );
-  //
-  // const signedOrderBundle: SignedOrderBundle = {
-  //   ...orderBundle,
-  //   acrossTransfers: orderBundle.acrossTransfers.map((transfer: any) => ({
-  //     ...transfer,
-  //     userSignature: packedSig,
-  //   })),
-  //   targetExecutionSignature:
-  //     orderBundle.userOp.sender !== zeroAddress ? "0x" : packedSig,
-  //   userOp: orderBundle.userOp,
-  // };
-  //
-  // // send the signed bundle
-  // const bundleId = await orchestrator.postSignedOrderBundle(
-  //   signedOrderBundle,
-  //   userId,
-  // );
-  //
-  // // check bundle status
-  // const bundleStatus = await orchestrator.getBundleStatus(userId, bundleId);
-  // return bundleStatus;
+  const orderBundleHash = await getOrderBundleHash(orderBundle);
+
+  const bundleSignature = await owner.signMessage({
+    message: { raw: orderBundleHash },
+  });
+  const packedSig = encodePacked(
+    ["address", "bytes"],
+    [ownableValidator.address, bundleSignature],
+  );
+
+  const signedOrderBundle: SignedOrderBundle = {
+    ...orderBundle,
+    acrossTransfers: orderBundle.acrossTransfers.map((transfer: any) => ({
+      ...transfer,
+      userSignature: packedSig,
+    })),
+    targetExecutionSignature:
+      orderBundle.userOp.sender !== zeroAddress ? "0x" : packedSig,
+    userOp: orderBundle.userOp,
+  };
+
+  // send the signed bundle
+  const bundleId = await orchestrator.postSignedOrderBundle(
+    signedOrderBundle,
+    userId,
+  );
+
+  // check bundle status
+  const bundleStatus = await orchestrator.getBundleStatus(userId, bundleId);
+  return bundleStatus;
 }
