@@ -147,7 +147,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [sourceSafeAccount.address, 1n],
+      args: [sourceSafeAccount.address, 2n],
     }),
   });
 
@@ -244,7 +244,7 @@ export default async function main({
   const tokenTransfers = [
     {
       tokenAddress: getTokenAddress("USDC", targetChain.id),
-      amount: 1n,
+      amount: 2n,
     },
   ];
 
@@ -276,7 +276,7 @@ export default async function main({
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 1n],
+          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
         }),
       },
     ],
