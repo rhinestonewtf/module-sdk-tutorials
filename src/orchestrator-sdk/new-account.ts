@@ -21,6 +21,7 @@ import {
   keccak256,
   pad,
   zeroAddress,
+  zeroHash,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -248,6 +249,48 @@ export default async function main({
     },
   ];
 
+  // create the meta intent
+  const metaIntent: MetaIntent = {
+    targetChainId: targetChain.id,
+    tokenTransfers: tokenTransfers,
+    targetAccount: targetSafeAccount.address,
+    targetExecutions: [],
+    userOp: {
+      sender: zeroAddress,
+      nonce: 0n,
+      initCode: "0x",
+      callData: "0x",
+      accountGasLimits: zeroHash,
+      preVerificationGas: 0n,
+      gasFees: zeroHash,
+      paymasterAndData: "0x",
+      signature: "0x",
+    },
+  };
+
+  const orderPath = await fetch(
+    `${ORCHESTRATOR_URL}/users/${userId}/bundles/path`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": orchestratorApiKey,
+      },
+      body: JSON.stringify(metaIntent),
+    },
+  ).then((res) => res.json());
+
+  console.log(orderPath);
+
+  const { orderBundle, injectedExecutions } = orderPath;
+
+  console.log(orderBundle, injectedExecutions);
+
+  // const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
+  //   metaIntent,
+  //   userId,
+  // );
+
   // create the userOperation
   const nonce = await getAccountNonce(targetPublicClient, {
     address: targetSafeAccount.address,
@@ -268,18 +311,23 @@ export default async function main({
     ),
   );
 
+  const userOpActions = [
+    ...injectedExecutions.slice(1),
+    {
+      to: getTokenAddress("USDC", targetChain.id),
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+      }),
+    },
+  ];
+
+  console.log(userOpActions);
+
   const userOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
-    calls: [
-      {
-        to: getTokenAddress("USDC", targetChain.id),
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
-        }),
-      },
-    ],
+    calls: userOpActions,
     nonce: nonce,
     signature: getOwnableValidatorMockSignature({ threshold: 1 }),
     stateOverride: [
@@ -295,6 +343,27 @@ export default async function main({
     ],
   });
 
+  console.log([
+    // callback action is always the first action in injectedExecutions
+    ...(injectedExecutions?.[0] ? [injectedExecutions[0]] : []),
+    ...userOpActions,
+  ]);
+
+  const injectedExecutionsMapped = [
+    // callback action is always the first action in injectedExecutions
+    ...(injectedExecutions?.[0] ? [injectedExecutions[0]] : []),
+  ].map((action) => ({
+    to: action.target,
+    value: BigInt(Number(action.value)),
+    data: action.callData || "0x",
+  }));
+
+  // add the callback
+  userOp.callData = await targetSafeAccount.encodeCalls([
+    ...injectedExecutionsMapped,
+    ...userOpActions,
+  ]);
+
   // manually increase gas
   userOp.callGasLimit += BigInt(100000);
 
@@ -305,35 +374,13 @@ export default async function main({
     entryPointAddress: entryPoint07Address,
     entryPointVersion: "0.7",
   });
+
   userOp.signature = await owner.signMessage({
     message: { raw: userOpHash },
   });
 
-  // create the meta intent
-  const metaIntent: MetaIntent = {
-    targetChainId: targetChain.id,
-    tokenTransfers: tokenTransfers,
-    targetAccount: targetSafeAccount.address,
-    targetExecutions: [],
-    userOp: toPackedUserOperation(userOp),
-  };
-
-  const { orderBundle, injectedExecutions } = await fetch(
-    `${ORCHESTRATOR_URL}/users/${userId}/bundles/path`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": orchestratorApiKey,
-      },
-      body: JSON.stringify(metaIntent),
-    },
-  ).then((res) => res.json());
-
-  // const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
-  //   metaIntent,
-  //   userId,
-  // );
+  // add userOperation into metaintent
+  metaIntent.userOp = toPackedUserOperation(userOp);
 
   // sign the meta intent
   const orderBundleHash = await getOrderBundleHash(orderBundle);
