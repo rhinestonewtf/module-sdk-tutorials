@@ -280,11 +280,7 @@ export default async function main({
     },
   ).then((res) => res.json());
 
-  console.log(orderPath);
-
   const { orderBundle, injectedExecutions } = orderPath;
-
-  console.log(orderBundle, injectedExecutions);
 
   // const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
   //   metaIntent,
@@ -323,8 +319,6 @@ export default async function main({
     },
   ];
 
-  console.log(userOpActions);
-
   const userOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
     calls: userOpActions,
@@ -342,12 +336,6 @@ export default async function main({
       },
     ],
   });
-
-  console.log([
-    // callback action is always the first action in injectedExecutions
-    ...(injectedExecutions?.[0] ? [injectedExecutions[0]] : []),
-    ...userOpActions,
-  ]);
 
   const injectedExecutionsMapped = [
     // callback action is always the first action in injectedExecutions
