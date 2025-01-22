@@ -16,6 +16,7 @@ import scheduledTransfersPermissionlessSafe from "../src/scheduled-transfers/per
 import scheduledOrdersPermissionlessSafe from "../src/scheduled-orders/permissionless-safe";
 import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-safe";
 import omniAccountNewAccount from "../src/orchestrator-sdk/new-account";
+import omniAccountExistingAccount from "../src/orchestrator-sdk/existing-account";
 
 import * as dotenv from "dotenv";
 import { Hex } from "viem";
@@ -133,8 +134,19 @@ describe("Test erc7579 reference implementation", () => {
   //   // expect(receipt.success).toBe(true);
   // }, 200000);
   //
-  it("should test omni account with a new account", async () => {
-    const bundleStatus = await omniAccountNewAccount({
+  // it("should test omni account with a new account", async () => {
+  //   const bundleStatus = await omniAccountNewAccount({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+
+  it("should test omni account with an existing account", async () => {
+    const bundleStatus = await omniAccountExistingAccount({
       sourceChain: baseSepolia,
       targetChain: optimismSepolia,
       orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
@@ -143,6 +155,4 @@ describe("Test erc7579 reference implementation", () => {
     });
     console.log(bundleStatus);
   }, 200000);
-
-  //
 });

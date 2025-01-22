@@ -1,7 +1,4 @@
 import {
-  ACCOUNT_LOCKER_SOURCE_EXECUTOR,
-  ACCOUNT_LOCKER_TARGET_EXECUTOR,
-  getAccountLockerHook,
   getOwnableValidator,
   getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
@@ -108,6 +105,19 @@ export default async function main({
       {
         address: "0xA90F831363708B32a3f1502165253E0210cf680d",
         context: "0x",
+      },
+    ],
+    fallbacks: [
+      {
+        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
+        context: encodeAbiParameters(
+          [
+            { name: "selector", type: "bytes4" },
+            { name: "flags", type: "bytes1" },
+            { name: "data", type: "bytes" },
+          ],
+          ["0x3a5be8cb", "0x00", "0x"],
+        ),
       },
     ],
   });
@@ -223,6 +233,19 @@ export default async function main({
       {
         address: "0xA90F831363708B32a3f1502165253E0210cf680d",
         context: "0x",
+      },
+    ],
+    fallbacks: [
+      {
+        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
+        context: encodeAbiParameters(
+          [
+            { name: "selector", type: "bytes4" },
+            { name: "flags", type: "bytes1" },
+            { name: "data", type: "bytes" },
+          ],
+          ["0x3a5be8cb", "0x00", "0x"],
+        ),
       },
     ],
   });
