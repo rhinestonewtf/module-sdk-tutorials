@@ -1,10 +1,12 @@
 import {
   getOwnableValidator,
-  getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
 import { createSmartAccountClient } from "permissionless";
-import { toSafeSmartAccount } from "permissionless/accounts";
+import {
+  toSafeSmartAccount,
+  ToSafeSmartAccountParameters,
+} from "permissionless/accounts";
 import {
   Chain,
   createPublicClient,
@@ -15,28 +17,20 @@ import {
   erc20Abi,
   Hex,
   http,
-  keccak256,
-  pad,
   zeroAddress,
   zeroHash,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  entryPoint07Address,
-  getUserOperationHash,
-  toPackedUserOperation,
-} from "viem/account-abstraction";
+import { entryPoint07Address } from "viem/account-abstraction";
 import {
   getOrchestrator,
   getOrderBundleHash,
   getTokenAddress,
   MetaIntent,
-  ORCHESTRATOR_URL,
   SignedOrderBundle,
 } from "@rhinestone/orchestrator-sdk";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
-import { getAccountNonce } from "permissionless/actions";
 
 export default async function main({
   sourceChain,
@@ -60,7 +54,6 @@ export default async function main({
   });
 
   // create the source clients
-
   const sourcePublicClient = createPublicClient({
     chain: sourceChain,
     transport: http(),
@@ -76,7 +69,10 @@ export default async function main({
     },
   });
 
-  const sourceSafeAccount = await toSafeSmartAccount({
+  const smartAccountConfig: ToSafeSmartAccountParameters<
+    "0.7",
+    "0x7579011aB74c46090561ea277Ba79D510c6C00ff"
+  > = {
     client: sourcePublicClient,
     owners: [owner],
     version: "1.4.1",
@@ -120,7 +116,9 @@ export default async function main({
         ),
       },
     ],
-  });
+  };
+
+  const sourceSafeAccount = await toSafeSmartAccount(smartAccountConfig);
 
   const sourceSmartAccountClient = createSmartAccountClient({
     account: sourceSafeAccount,
@@ -205,49 +203,8 @@ export default async function main({
   });
 
   const targetSafeAccount = await toSafeSmartAccount({
+    ...smartAccountConfig,
     client: targetPublicClient,
-    owners: [owner],
-    version: "1.4.1",
-    entryPoint: {
-      address: entryPoint07Address,
-      version: "0.7",
-    },
-    safe4337ModuleAddress: "0x7579EE8307284F293B1927136486880611F20002",
-    erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
-    attesters: [
-      RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
-      "0x8a310b9085faF5d9464D84C3d9a7BE3b28c94531", // Mock attester for omni account
-    ],
-    attestersThreshold: 1,
-    validators: [
-      {
-        address: ownableValidator.address,
-        context: ownableValidator.initData,
-      },
-    ],
-    executors: [
-      {
-        address: "0xE1058634834E01038CadbaE8208BFfF81B1Ede51",
-        context: "0x",
-      },
-      {
-        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
-        context: "0x",
-      },
-    ],
-    fallbacks: [
-      {
-        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
-        context: encodeAbiParameters(
-          [
-            { name: "selector", type: "bytes4" },
-            { name: "flags", type: "bytes1" },
-            { name: "data", type: "bytes" },
-          ],
-          ["0x3a5be8cb", "0x00", "0x"],
-        ),
-      },
-    ],
   });
 
   const targetSmartAccountClient = createSmartAccountClient({
@@ -321,24 +278,10 @@ export default async function main({
     },
   };
 
-  const orderPath = await fetch(
-    `${ORCHESTRATOR_URL}/users/${userId}/bundles/path`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": orchestratorApiKey,
-      },
-      body: JSON.stringify(metaIntent),
-    },
-  ).then((res) => res.json());
-
-  const { orderBundle, injectedExecutions } = orderPath;
-
-  // const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
-  //   metaIntent,
-  //   userId,
-  // );
+  const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
+    metaIntent,
+    userId,
+  );
 
   metaIntent.targetExecutions = [
     ...injectedExecutions,
