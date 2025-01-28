@@ -1,4 +1,9 @@
 import {
+  encodeModuleInstallationData,
+  getAccount,
+  getAccountLockerHook,
+  getAccountLockerSourceExecutor,
+  getAccountLockerTargetExecutor,
   getOwnableValidator,
   RHINESTONE_ATTESTER_ADDRESS,
 } from "@rhinestone/module-sdk";
@@ -69,6 +74,10 @@ export default async function main({
     },
   });
 
+  // get initial modules
+  const sourceExecutor = getAccountLockerSourceExecutor();
+  const targetExecutor = getAccountLockerTargetExecutor();
+
   const smartAccountConfig: ToSafeSmartAccountParameters<
     "0.7",
     "0x7579011aB74c46090561ea277Ba79D510c6C00ff"
@@ -95,25 +104,28 @@ export default async function main({
     ],
     executors: [
       {
-        address: "0xE1058634834E01038CadbaE8208BFfF81B1Ede51",
-        context: "0x",
+        address: sourceExecutor.address,
+        context: sourceExecutor.initData,
       },
       {
-        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
-        context: "0x",
+        address: targetExecutor.address,
+        context: targetExecutor.initData,
       },
     ],
     fallbacks: [
       {
-        address: "0xA90F831363708B32a3f1502165253E0210cf680d",
-        context: encodeAbiParameters(
-          [
-            { name: "selector", type: "bytes4" },
-            { name: "flags", type: "bytes1" },
-            { name: "data", type: "bytes" },
-          ],
-          ["0x3a5be8cb", "0x00", "0x"],
-        ),
+        address: targetExecutor.address,
+        context: encodeModuleInstallationData({
+          account: getAccount({
+            address: zeroAddress,
+            type: "safe",
+          }),
+          module: {
+            ...targetExecutor,
+            type: "fallback",
+            functionSig: "0x3a5be8cb",
+          },
+        }),
       },
     ],
   };
@@ -165,20 +177,19 @@ export default async function main({
   });
 
   // install the hook on source chain
+  const resourceLockHook = getAccountLockerHook({
+    isOmniMode: true,
+  });
+
   const opHash = await sourceSmartAccountClient.installModule({
-    address: "0x29BDcBc36e344061393f8AB58D2D6AABaedeAaAE",
-    initData: encodeAbiParameters(
-      [
-        { name: "hookType", type: "uint256" },
-        { name: "hookId", type: "bytes4" },
-        { name: "data", type: "bytes" },
-      ],
-      [
-        0n,
-        "0x00000000",
-        encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
-      ],
-    ),
+    address: resourceLockHook.address,
+    initData: encodeModuleInstallationData({
+      account: getAccount({
+        address: sourceSafeAccount.address,
+        type: "safe",
+      }),
+      module: resourceLockHook,
+    }),
     type: "hook",
   });
 

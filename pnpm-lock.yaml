@@ -18,8 +18,8 @@ importers:
         specifier: ^0.0.3
         version: 0.0.3(viem@2.21.51(typescript@5.6.2))
       '@rhinestone/module-sdk':
-        specifier: ^0.2.3
-        version: 0.2.3(viem@2.21.51(typescript@5.6.2))
+        specifier: ^0.2.4
+        version: 0.2.4(viem@2.21.51(typescript@5.6.2))
       '@rhinestone/orchestrator-sdk':
         specifier: ^0.1.10
         version: 0.1.10(viem@2.21.51(typescript@5.6.2))
@@ -429,8 +429,8 @@ packages:
     peerDependencies:
       viem: ^2.17.8
 
-  '@rhinestone/module-sdk@0.2.3':
-    resolution: {integrity: sha512-YbwK0R6N2ApxHJNYPGx1HsRXmMtLxOrn3GYxXvOeYPVjiY13kHIxq+1XfzLFwAwIT7DKpprg0mY5s6YuUpByGA==}
+  '@rhinestone/module-sdk@0.2.4':
+    resolution: {integrity: sha512-LPJWHt03JvPrWe6w4jnU/eLG26jHOY6UxoXl5T2WDnLWS1K9nZUSYzDItgGyd/2WefY8+2VdLMbxgysv5pz9Dw==}
     peerDependencies:
       viem: ^2.0.0
 
@@ -2305,7 +2305,7 @@ snapshots:
     dependencies:
       viem: 2.21.51(typescript@5.6.2)
 
-  '@rhinestone/module-sdk@0.2.3(viem@2.21.51(typescript@5.6.2))':
+  '@rhinestone/module-sdk@0.2.4(viem@2.21.51(typescript@5.6.2))':
     dependencies:
       solady: 0.0.235
       tslib: 2.7.0
