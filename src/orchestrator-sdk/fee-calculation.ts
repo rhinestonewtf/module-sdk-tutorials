@@ -343,6 +343,9 @@ export default async function main({
   // manually increase gas
   userOp.callGasLimit += BigInt(100000);
 
+  // todo: calculate fees
+  console.log("fees");
+
   // sign the userOperation
   const userOpHash = getUserOperationHash({
     userOperation: userOp,
