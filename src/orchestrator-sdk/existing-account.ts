@@ -16,7 +16,6 @@ import {
   Chain,
   createPublicClient,
   createWalletClient,
-  encodeAbiParameters,
   encodeFunctionData,
   encodePacked,
   erc20Abi,
