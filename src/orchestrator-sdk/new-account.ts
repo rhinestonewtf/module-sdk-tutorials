@@ -232,7 +232,6 @@ export default async function main({
     bundlerTransport: http(
       `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
     ),
-    paymaster: targetPimlicoClient,
     userOperation: {
       estimateFeesPerGas: async () => {
         return (await targetPimlicoClient.getUserOperationGasPrice()).fast;

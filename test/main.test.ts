@@ -147,17 +147,16 @@ describe("Test erc7579 reference implementation", () => {
   //   console.log(bundleStatus);
   // }, 200000);
 
-  // it("should test omni account with an existing account", async () => {
-  //   const bundleStatus = await omniAccountExistingAccount({
-  //     sourceChain: baseSepolia,
-  //     targetChain: optimismSepolia,
-  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
-  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
-  //   });
-  //   console.log(bundleStatus);
-  // }, 200000);
-  //
+  it("should test omni account with an existing account", async () => {
+    const bundleStatus = await omniAccountExistingAccount({
+      sourceChain: baseSepolia,
+      targetChain: optimismSepolia,
+      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+    });
+    console.log(bundleStatus);
+  }, 200000);
 
   // it("should test omni account with fee calculation", async () => {
   //   const bundleStatus = await omniAccountFeeCalculation({
@@ -170,14 +169,14 @@ describe("Test erc7579 reference implementation", () => {
   //   console.log(bundleStatus);
   // }, 200000);
 
-  it("should test omni account with smart sessions", async () => {
-    const bundleStatus = await omniAccountSmartSessions({
-      sourceChain: baseSepolia,
-      targetChain: optimismSepolia,
-      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
-      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
-    });
-    console.log(bundleStatus);
-  }, 200000);
+  // it("should test omni account with smart sessions", async () => {
+  //   const bundleStatus = await omniAccountSmartSessions({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
 });
