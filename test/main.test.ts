@@ -18,6 +18,7 @@ import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-sa
 import omniAccountNewAccount from "../src/orchestrator-sdk/new-account";
 import omniAccountExistingAccount from "../src/orchestrator-sdk/existing-account";
 import omniAccountFeeCalculation from "../src/orchestrator-sdk/fee-calculation";
+import omniAccountSmartSessions from "../src/orchestrator-sdk/smart-sessions";
 
 import * as dotenv from "dotenv";
 import { Hex } from "viem";
@@ -158,8 +159,19 @@ describe("Test erc7579 reference implementation", () => {
   // }, 200000);
   //
 
-  it("should test omni account with fee calculation", async () => {
-    const bundleStatus = await omniAccountFeeCalculation({
+  // it("should test omni account with fee calculation", async () => {
+  //   const bundleStatus = await omniAccountFeeCalculation({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+
+  it("should test omni account with smart sessions", async () => {
+    const bundleStatus = await omniAccountSmartSessions({
       sourceChain: baseSepolia,
       targetChain: optimismSepolia,
       orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
