@@ -35,11 +35,16 @@ import {
   toPackedUserOperation,
 } from "viem/account-abstraction";
 import {
+  getEmptyUserOp,
+  getHookAddress,
   getOrchestrator,
   getOrderBundleHash,
+  getSameChainModuleAddress,
+  getTargetModuleAddress,
   getTokenAddress,
   MetaIntent,
-  SignedOrderBundle,
+  PostOrderBundleResult,
+  SignedMultiChainCompact,
 } from "@rhinestone/orchestrator-sdk";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
@@ -82,10 +87,6 @@ export default async function main({
     },
   });
 
-  // get initial modules
-  const sourceExecutor = getAccountLockerSourceExecutor();
-  const targetExecutor = getAccountLockerTargetExecutor();
-
   const smartAccountConfig: ToSafeSmartAccountParameters<
     "0.7",
     "0x7579011aB74c46090561ea277Ba79D510c6C00ff"
@@ -101,7 +102,7 @@ export default async function main({
     erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
     attesters: [
       RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
-      "0x8a310b9085faF5d9464D84C3d9a7BE3b28c94531", // Mock attester for omni account
+      "0x6D0515e8E499468DCe9583626f0cA15b887f9d03", // Mock attester for omni account
     ],
     attestersThreshold: 1,
     validators: [
@@ -112,28 +113,29 @@ export default async function main({
     ],
     executors: [
       {
-        address: sourceExecutor.address,
-        context: sourceExecutor.initData,
+        address: getSameChainModuleAddress(targetChain.id),
+        context: "0x",
       },
       {
-        address: targetExecutor.address,
-        context: targetExecutor.initData,
+        address: getTargetModuleAddress(targetChain.id),
+        context: "0x",
+      },
+      {
+        address: getHookAddress(targetChain.id),
+        context: "0x",
       },
     ],
     fallbacks: [
       {
-        address: targetExecutor.address,
-        context: encodeModuleInstallationData({
-          account: getAccount({
-            address: zeroAddress,
-            type: "safe",
-          }),
-          module: {
-            ...targetExecutor,
-            type: "fallback",
-            functionSig: "0x3a5be8cb",
-          },
-        }),
+        address: getTargetModuleAddress(targetChain.id),
+        context: encodeAbiParameters(
+          [
+            { name: "selector", type: "bytes4" },
+            { name: "flags", type: "bytes1" },
+            { name: "data", type: "bytes" },
+          ],
+          ["0x3a5be8cb", "0x00", "0x"],
+        ),
       },
     ],
   };
@@ -157,12 +159,6 @@ export default async function main({
   // create the orchestrator client
   const orchestrator = getOrchestrator(orchestratorApiKey);
 
-  // create a new user on orchestrator
-  const userId = await orchestrator.createUserAccount(
-    sourceSafeAccount.address,
-    [sourceChain.id, targetChain.id],
-  );
-
   // fund the smart account
   const fundingAccount = privateKeyToAccount(fundingPrivateKey);
   const sourceWalletClient = createWalletClient({
@@ -185,19 +181,20 @@ export default async function main({
   });
 
   // install the hook on source chain
-  const resourceLockHook = getAccountLockerHook({
-    isOmniMode: true,
-  });
-
   const opHash = await sourceSmartAccountClient.installModule({
-    address: resourceLockHook.address,
-    initData: encodeModuleInstallationData({
-      account: getAccount({
-        address: sourceSafeAccount.address,
-        type: "safe",
-      }),
-      module: resourceLockHook,
-    }),
+    address: getHookAddress(targetChain.id),
+    initData: encodeAbiParameters(
+      [
+        { name: "hookType", type: "uint256" },
+        { name: "hookId", type: "bytes4" },
+        { name: "data", type: "bytes" },
+      ],
+      [
+        0n,
+        "0x00000000",
+        encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+      ],
+    ),
     type: "hook",
   });
 
@@ -232,7 +229,7 @@ export default async function main({
     bundlerTransport: http(
       `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
     ),
-    paymaster: targetPimlicoClient,
+    // paymaster: targetPimlicoClient,
     userOperation: {
       estimateFeesPerGas: async () => {
         return (await targetPimlicoClient.getUserOperationGasPrice()).fast;
@@ -253,23 +250,12 @@ export default async function main({
     targetChainId: targetChain.id,
     tokenTransfers: tokenTransfers,
     targetAccount: targetSafeAccount.address,
-    targetExecutions: [],
-    userOp: {
-      sender: zeroAddress,
-      nonce: 0n,
-      initCode: "0x",
-      callData: "0x",
-      accountGasLimits: zeroHash,
-      preVerificationGas: 0n,
-      gasFees: zeroHash,
-      paymasterAndData: "0x",
-      signature: "0x",
-    },
+    userOp: getEmptyUserOp(),
   };
 
-  const { orderBundle, injectedExecutions } = await orchestrator.getOrderPath(
+  const orderPath = await orchestrator.getOrderPath(
     metaIntent,
-    userId,
+    targetSafeAccount.address,
   );
 
   // create the userOperation
@@ -285,10 +271,10 @@ export default async function main({
   });
 
   const userOpActions = [
-    ...injectedExecutions.slice(1).map((execution: any) => ({
-      to: execution.target,
-      value: BigInt(Number(execution.value)),
-      data: execution.callData || "0x",
+    ...orderPath[0].injectedExecutions.map((execution: any) => ({
+      to: execution.to,
+      value: BigInt(execution.value),
+      data: execution.data || "0x",
     })),
     {
       to: getTokenAddress("USDC", targetChain.id),
@@ -309,7 +295,7 @@ export default async function main({
 
   const userOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
-    calls: userOpActions,
+    calls: userOpActions.slice(1),
     nonce: nonce,
     signature: getOwnableValidatorMockSignature({ threshold: 1 }),
     stateOverride: [
@@ -318,29 +304,21 @@ export default async function main({
         stateDiff: [
           {
             slot: balanceSlot,
-            value: pad("0xa"),
+            value: pad("0xaaaa"),
           },
         ],
       },
     ],
   });
 
-  const injectedExecutionsMapped = [
-    // callback action is always the first action in injectedExecutions
-    ...(injectedExecutions?.[0] ? [injectedExecutions[0]] : []),
-  ].map((action) => ({
-    to: action.target,
-    value: BigInt(Number(action.value)),
-    data: action.callData || "0x",
-  }));
-
   // add the callback
   userOp.callData = await targetSafeAccount.encodeCalls([
-    ...injectedExecutionsMapped,
+    ...orderPath[0].injectedExecutions.slice(0, 1),
     ...userOpActions,
   ]);
 
   // manually increase gas
+  userOp.verificationGasLimit += BigInt(100000);
   userOp.callGasLimit += BigInt(100000);
 
   // sign the userOperation
@@ -356,10 +334,10 @@ export default async function main({
   });
 
   // add userOperation into order bundle
-  orderBundle.userOp = toPackedUserOperation(userOp);
+  orderPath[0].orderBundle.segments[0].witness.userOpHash = userOpHash;
 
   // sign the meta intent
-  const orderBundleHash = await getOrderBundleHash(orderBundle);
+  const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
 
   const bundleSignature = await owner.signMessage({
     message: { raw: orderBundleHash },
@@ -369,23 +347,26 @@ export default async function main({
     [ownableValidator.address, bundleSignature],
   );
 
-  const signedOrderBundle: SignedOrderBundle = {
-    ...orderBundle,
-    acrossTransfers: orderBundle.acrossTransfers.map((transfer: any) => ({
-      ...transfer,
-      userSignature: packedSig,
-    })),
-    targetExecutionSignature:
-      orderBundle.userOp.sender !== zeroAddress ? "0x" : packedSig,
+  const signedOrderBundle: SignedMultiChainCompact = {
+    ...orderPath[0].orderBundle,
+    originSignatures: Array(orderPath[0].orderBundle.segments.length).fill(
+      packedSig,
+    ),
+    targetSignature: packedSig, // TODO: Check what this value should be
   };
 
   // send the signed bundle
-  const bundleId = await orchestrator.postSignedOrderBundle(
-    signedOrderBundle,
-    userId,
-  );
+  const bundleResults: PostOrderBundleResult =
+    await orchestrator.postSignedOrderBundle([
+      {
+        signedOrderBundle,
+        userOp,
+      },
+    ]);
 
   // check bundle status
-  const bundleStatus = await orchestrator.getBundleStatus(userId, bundleId);
+  const bundleStatus = await orchestrator.getBundleStatus(
+    bundleResults[0].bundleId,
+  );
   return bundleStatus;
 }
