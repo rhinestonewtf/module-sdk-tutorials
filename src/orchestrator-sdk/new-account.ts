@@ -25,6 +25,7 @@ import {
   http,
   keccak256,
   pad,
+  parseEther,
   zeroAddress,
   zeroHash,
 } from "viem";
@@ -189,7 +190,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [sourceSafeAccount.address, 2n],
+      args: [sourceSafeAccount.address, 10000000n],
     }),
   });
 
@@ -262,6 +263,10 @@ export default async function main({
   // construct a token transfer
   const tokenTransfers = [
     {
+      tokenAddress: zeroAddress,
+      amount: parseEther("0.001"),
+    },
+    {
       tokenAddress: getTokenAddress("USDC", targetChain.id),
       amount: 2n,
     },
@@ -308,10 +313,17 @@ export default async function main({
     },
   ];
 
-  const balanceSlot = keccak256(
+  const usdcSlot = keccak256(
     encodeAbiParameters(
       [{ type: "address" }, { type: "uint256" }],
       [targetSafeAccount.address, 9n],
+    ),
+  );
+
+  const wethSlot = keccak256(
+    encodeAbiParameters(
+      [{ type: "address" }, { type: "uint256" }],
+      [targetSafeAccount.address, 3n],
     ),
   );
 
@@ -325,10 +337,24 @@ export default async function main({
         address: getTokenAddress("USDC", targetChain.id),
         stateDiff: [
           {
-            slot: balanceSlot,
+            slot: usdcSlot,
             value: pad("0xaaaa"),
           },
         ],
+      },
+      {
+        address: getTokenAddress("WETH", targetChain.id),
+        stateDiff: [
+          {
+            slot: wethSlot,
+            value: pad("0xaaaaaaaaaaaaaaaaaa"),
+          },
+        ],
+      },
+
+      {
+        address: targetSafeAccount.address,
+        balance: parseEther("0.01"),
       },
     ],
   });
@@ -387,6 +413,8 @@ export default async function main({
     ]);
 
   console.log(bundleResults);
+  console.log((bundleResults[0] as any).error);
+  console.log((bundleResults[0] as any).error.call.data);
 
   // check bundle status
   const bundleStatus = await orchestrator.getBundleStatus(
