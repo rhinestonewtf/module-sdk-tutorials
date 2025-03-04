@@ -125,6 +125,23 @@ export default async function main({
         context: "0x",
       },
     ],
+    hooks: [
+      {
+        address: getHookAddress(targetChain.id),
+        context: encodeAbiParameters(
+          [
+            { name: "hookType", type: "uint256" },
+            { name: "hookId", type: "bytes4" },
+            { name: "data", type: "bytes" },
+          ],
+          [
+            0n,
+            "0x00000000",
+            encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+          ],
+        ),
+      },
+    ],
     fallbacks: [
       {
         address: getTargetModuleAddress(targetChain.id),
@@ -180,25 +197,30 @@ export default async function main({
     hash: fundingTxHash,
   });
 
-  // install the hook on source chain
-  const opHash = await sourceSmartAccountClient.installModule({
-    address: getHookAddress(targetChain.id),
-    initData: encodeAbiParameters(
-      [
-        { name: "hookType", type: "uint256" },
-        { name: "hookId", type: "bytes4" },
-        { name: "data", type: "bytes" },
-      ],
-      [
-        0n,
-        "0x00000000",
-        encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
-      ],
-    ),
-    type: "hook",
+  // // install the hook on source chain
+  // const opHash = await sourceSmartAccountClient.installModule({
+  //   address: getHookAddress(targetChain.id),
+  //   initData: encodeAbiParameters(
+  //     [
+  //       { name: "hookType", type: "uint256" },
+  //       { name: "hookId", type: "bytes4" },
+  //       { name: "data", type: "bytes" },
+  //     ],
+  //     [
+  //       0n,
+  //       "0x00000000",
+  //       encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+  //     ],
+  //   ),
+  //   type: "hook",
+  // });
+
+  const opHash = await sourceSmartAccountClient.sendTransaction({
+    to: zeroAddress,
+    data: "0x11111111",
   });
 
-  await sourcePimlicoClient.waitForUserOperationReceipt({
+  await sourcePublicClient.waitForTransactionReceipt({
     hash: opHash,
   });
 
@@ -363,6 +385,8 @@ export default async function main({
         userOp,
       },
     ]);
+
+  console.log(bundleResults);
 
   // check bundle status
   const bundleStatus = await orchestrator.getBundleStatus(
