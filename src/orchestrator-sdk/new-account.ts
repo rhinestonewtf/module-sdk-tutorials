@@ -1,9 +1,4 @@
 import {
-  encodeModuleInstallationData,
-  getAccount,
-  getAccountLockerHook,
-  getAccountLockerSourceExecutor,
-  getAccountLockerTargetExecutor,
   getOwnableValidator,
   getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
@@ -28,13 +23,11 @@ import {
   parseEther,
   toHex,
   zeroAddress,
-  zeroHash,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
   entryPoint07Address,
   getUserOperationHash,
-  toPackedUserOperation,
 } from "viem/account-abstraction";
 import {
   getEmptyUserOp,
@@ -401,7 +394,7 @@ export default async function main({
     originSignatures: Array(orderPath[0].orderBundle.segments.length).fill(
       packedSig,
     ),
-    targetSignature: packedSig, // TODO: Check what this value should be
+    targetSignature: packedSig,
   };
 
   // send the signed bundle

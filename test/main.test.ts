@@ -135,19 +135,8 @@ describe("Test erc7579 reference implementation", () => {
   //   // expect(receipt.success).toBe(true);
   // }, 200000);
   //
-  it("should test omni account with a new account", async () => {
-    const bundleStatus = await omniAccountNewAccount({
-      sourceChain: baseSepolia,
-      targetChain: optimismSepolia,
-      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
-      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
-    });
-    console.log(bundleStatus);
-  }, 200000);
-
-  // it("should test omni account with an existing account", async () => {
-  //   const bundleStatus = await omniAccountExistingAccount({
+  // it("should test omni account with a new account", async () => {
+  //   const bundleStatus = await omniAccountNewAccount({
   //     sourceChain: baseSepolia,
   //     targetChain: optimismSepolia,
   //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
@@ -156,7 +145,17 @@ describe("Test erc7579 reference implementation", () => {
   //   });
   //   console.log(bundleStatus);
   // }, 200000);
-  //
+
+  it("should test omni account with an existing account", async () => {
+    const bundleStatus = await omniAccountExistingAccount({
+      sourceChain: baseSepolia,
+      targetChain: optimismSepolia,
+      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+    });
+    console.log(bundleStatus);
+  }, 200000);
 
   // it("should test omni account with fee calculation", async () => {
   //   const bundleStatus = await omniAccountFeeCalculation({
