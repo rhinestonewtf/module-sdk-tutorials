@@ -26,6 +26,7 @@ import {
   keccak256,
   pad,
   parseEther,
+  toHex,
   zeroAddress,
   zeroHash,
 } from "viem";
@@ -263,7 +264,7 @@ export default async function main({
   // construct a token transfer
   const tokenTransfers = [
     {
-      tokenAddress: zeroAddress,
+      tokenAddress: getTokenAddress("WETH", targetChain.id),
       amount: parseEther("0.001"),
     },
     {
@@ -347,7 +348,7 @@ export default async function main({
         stateDiff: [
           {
             slot: wethSlot,
-            value: pad("0xaaaaaaaaaaaaaaaaaa"),
+            value: pad(toHex(parseEther("0.01"))),
           },
         ],
       },
@@ -411,10 +412,6 @@ export default async function main({
         userOp,
       },
     ]);
-
-  console.log(bundleResults);
-  console.log((bundleResults[0] as any).error);
-  console.log((bundleResults[0] as any).error.call.data);
 
   // check bundle status
   const bundleStatus = await orchestrator.getBundleStatus(
