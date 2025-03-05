@@ -327,11 +327,6 @@ export default async function main({
           },
         ],
       },
-
-      {
-        address: targetSafeAccount.address,
-        balance: parseEther("0.01"),
-      },
     ],
   });
 
