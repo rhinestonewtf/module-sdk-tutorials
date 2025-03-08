@@ -30,6 +30,7 @@ import {
   getUserOperationHash,
 } from "viem/account-abstraction";
 import {
+  BundleStatus,
   getEmptyUserOp,
   getHookAddress,
   getOrchestrator,
@@ -384,8 +385,18 @@ export default async function main({
     ]);
 
   // check bundle status
-  const bundleStatus = await orchestrator.getBundleStatus(
+  let bundleStatus = await orchestrator.getBundleStatus(
     bundleResults[0].bundleId,
   );
+
+  // check again every 2 seconds until the status changes
+  // // @ts-ignore
+  while (bundleStatus.status === BundleStatus.PENDING) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    bundleStatus = await orchestrator.getBundleStatus(
+      bundleResults[0].bundleId,
+    );
+  }
+
   return bundleStatus;
 }
