@@ -274,22 +274,6 @@ export default async function main({
     ),
   });
 
-  const userOpActions = [
-    ...orderPath[0].injectedExecutions.map((execution: any) => ({
-      to: execution.to,
-      value: BigInt(execution.value),
-      data: execution.data || "0x",
-    })),
-    {
-      to: getTokenAddress("USDC", targetChain.id),
-      data: encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
-      }),
-    },
-  ];
-
   const usdcSlot = keccak256(
     encodeAbiParameters(
       [{ type: "address" }, { type: "uint256" }],
@@ -306,7 +290,17 @@ export default async function main({
 
   const userOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
-    calls: userOpActions.slice(1),
+    calls: [
+      ...orderPath[0].injectedExecutions,
+      {
+        to: getTokenAddress("USDC", targetChain.id),
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+        }),
+      },
+    ],
     nonce: nonce,
     signature: getOwnableValidatorMockSignature({ threshold: 1 }),
     stateOverride: [
@@ -330,16 +324,6 @@ export default async function main({
       },
     ],
   });
-
-  // add the callback
-  userOp.callData = await targetSafeAccount.encodeCalls([
-    ...orderPath[0].injectedExecutions.slice(0, 1),
-    ...userOpActions,
-  ]);
-
-  // manually increase gas
-  userOp.verificationGasLimit += BigInt(100000);
-  userOp.callGasLimit += BigInt(100000);
 
   // sign the userOperation
   const userOpHash = getUserOperationHash({
