@@ -38,13 +38,11 @@ import { createPimlicoClient } from "permissionless/clients/pimlico";
 
 export default async function main({
   sourceChain,
-  targetChain,
   orchestratorApiKey,
   pimlicoApiKey,
   fundingPrivateKey,
 }: {
   sourceChain: Chain;
-  targetChain: Chain;
   orchestratorApiKey: string;
   pimlicoApiKey: string;
   fundingPrivateKey: Hex;
@@ -99,21 +97,21 @@ export default async function main({
     ],
     executors: [
       {
-        address: getSameChainModuleAddress(targetChain.id),
+        address: getSameChainModuleAddress(sourceChain.id),
         context: "0x",
       },
       {
-        address: getTargetModuleAddress(targetChain.id),
+        address: getTargetModuleAddress(sourceChain.id),
         context: "0x",
       },
       {
-        address: getHookAddress(targetChain.id),
+        address: getHookAddress(sourceChain.id),
         context: "0x",
       },
     ],
     hooks: [
       {
-        address: getHookAddress(targetChain.id),
+        address: getHookAddress(sourceChain.id),
         context: encodeAbiParameters(
           [
             { name: "hookType", type: "uint256" },
@@ -130,7 +128,7 @@ export default async function main({
     ],
     fallbacks: [
       {
-        address: getTargetModuleAddress(targetChain.id),
+        address: getTargetModuleAddress(sourceChain.id),
         context: encodeAbiParameters(
           [
             { name: "selector", type: "bytes4" },
@@ -145,7 +143,7 @@ export default async function main({
 
   const sourceSafeAccount = await toSafeSmartAccount(smartAccountConfig);
 
-  const sourceSmartAccountClient = createSmartAccountClient({
+  let sourceSmartAccountClient = createSmartAccountClient({
     account: sourceSafeAccount,
     chain: sourceChain,
     bundlerTransport: http(
@@ -193,77 +191,35 @@ export default async function main({
     hash: opHash,
   });
 
-  // create the target clients
-  const targetPublicClient = createPublicClient({
-    chain: targetChain,
-    transport: http(),
-  });
-
-  const targetPimlicoClient = createPimlicoClient({
-    transport: http(
-      `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
-    ),
-    entryPoint: {
-      address: entryPoint07Address,
-      version: "0.7",
-    },
-  });
-
-  const targetSafeAccount = await toSafeSmartAccount({
-    ...smartAccountConfig,
-    client: targetPublicClient,
-  });
-
-  const targetSmartAccountClient = createSmartAccountClient({
-    account: targetSafeAccount,
-    chain: targetChain,
+  sourceSmartAccountClient = createSmartAccountClient({
+    account: sourceSafeAccount,
+    chain: sourceChain,
     bundlerTransport: http(
-      `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
+      `https://api.pimlico.io/v2/${sourceChain.id}/rpc?apikey=${pimlicoApiKey}`,
     ),
-    paymaster: targetPimlicoClient,
     userOperation: {
       estimateFeesPerGas: async () => {
-        return (await targetPimlicoClient.getUserOperationGasPrice()).fast;
+        return (await sourcePimlicoClient.getUserOperationGasPrice()).fast;
       },
     },
   }).extend(erc7579Actions());
 
-  // do a transaction to deploy the account on the target chain and install the modules
-  const deployUserOpHash = await targetSmartAccountClient.sendUserOperation({
-    account: targetSafeAccount,
-    calls: [
-      {
-        to: getTokenAddress("USDC", targetChain.id),
-        value: BigInt(0),
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [targetSafeAccount.address],
-        }),
-      },
-    ],
-  });
-
-  await targetPimlicoClient.waitForUserOperationReceipt({
-    hash: deployUserOpHash,
-  });
-
   // construct a token transfer
   const tokenTransfers = [
     {
-      tokenAddress: getTokenAddress("USDC", targetChain.id),
+      tokenAddress: getTokenAddress("USDC", sourceChain.id),
       amount: 2n,
     },
   ];
 
   // create the meta intent
   const metaIntent: MetaIntent = {
-    targetChainId: targetChain.id,
+    targetChainId: sourceChain.id,
     tokenTransfers: tokenTransfers,
-    targetAccount: targetSafeAccount.address,
+    targetAccount: sourceSafeAccount.address,
     targetExecutions: [
       {
-        to: getTokenAddress("USDC", targetChain.id),
+        to: getTokenAddress("USDC", sourceChain.id),
         value: 0n,
         data: encodeFunctionData({
           abi: erc20Abi,
@@ -276,7 +232,7 @@ export default async function main({
 
   const orderPath = await orchestrator.getOrderPath(
     metaIntent,
-    targetSafeAccount.address,
+    sourceSafeAccount.address,
   );
 
   orderPath[0].orderBundle.segments[0].witness.execs = [
