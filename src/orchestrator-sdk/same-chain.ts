@@ -208,7 +208,7 @@ export default async function main({
   const tokenTransfers = [
     {
       tokenAddress: getTokenAddress("USDC", sourceChain.id),
-      amount: 2n,
+      amount: 1n,
     },
   ];
 
