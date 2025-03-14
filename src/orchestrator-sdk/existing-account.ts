@@ -160,7 +160,10 @@ export default async function main({
   }).extend(erc7579Actions());
 
   // create the orchestrator client
-  const orchestrator = getOrchestrator(orchestratorApiKey);
+  const orchestrator = getOrchestrator(
+    orchestratorApiKey,
+    "http://localhost:3000",
+  );
 
   // fund the smart account
   const fundingAccount = privateKeyToAccount(fundingPrivateKey);
@@ -175,7 +178,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [sourceSafeAccount.address, 2n],
+      args: [sourceSafeAccount.address, 20000n],
     }),
   });
 
@@ -229,7 +232,7 @@ export default async function main({
   }).extend(erc7579Actions());
 
   // do a transaction to deploy the account on the target chain and install the modules
-  const deployUserOpHash = await targetSmartAccountClient.sendUserOperation({
+  const deployUserOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
     calls: [
       {
@@ -244,9 +247,9 @@ export default async function main({
     ],
   });
 
-  await targetPimlicoClient.waitForUserOperationReceipt({
-    hash: deployUserOpHash,
-  });
+  // await targetPimlicoClient.waitForUserOperationReceipt({
+  //   hash: deployUserOpHash,
+  // });
 
   // construct a token transfer
   const tokenTransfers = [
@@ -303,11 +306,20 @@ export default async function main({
     targetSignature: packedSig,
   };
 
+  let initCode: Hex | undefined;
+  if (deployUserOp.factory && deployUserOp.factoryData) {
+    initCode = encodePacked(
+      ["address", "bytes"],
+      [deployUserOp.factory, deployUserOp.factoryData],
+    );
+  }
+
   // send the signed bundle
   const bundleResults: PostOrderBundleResult =
     await orchestrator.postSignedOrderBundle([
       {
         signedOrderBundle,
+        initCode,
       },
     ]);
 
@@ -323,6 +335,7 @@ export default async function main({
     bundleStatus = await orchestrator.getBundleStatus(
       bundleResults[0].bundleId,
     );
+    console.log(bundleStatus);
   }
 
   return bundleStatus;
