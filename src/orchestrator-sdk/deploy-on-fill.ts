@@ -214,7 +214,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [safeAccountAddress, 20000n],
+      args: [safeAccountAddress, 100000n],
     }),
   });
 
