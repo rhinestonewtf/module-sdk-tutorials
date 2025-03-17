@@ -18,6 +18,9 @@ import autoSavingsPermissionlessSafe from "../src/auto-savings/permissionless-sa
 import omniAccountNewAccount from "../src/orchestrator-sdk/new-account";
 import omniAccountExistingAccount from "../src/orchestrator-sdk/existing-account";
 import omniAccountFeeCalculation from "../src/orchestrator-sdk/fee-calculation";
+import omniAccountSwaps from "../src/orchestrator-sdk/swaps";
+import omniAccountSameChain from "../src/orchestrator-sdk/same-chain";
+import omniAccountDeployOnFill from "../src/orchestrator-sdk/deploy-on-fill";
 
 import * as dotenv from "dotenv";
 import { Hex } from "viem";
@@ -146,16 +149,38 @@ describe("Test erc7579 reference implementation", () => {
   //   console.log(bundleStatus);
   // }, 200000);
 
-  it("should test omni account with an existing account", async () => {
-    const bundleStatus = await omniAccountExistingAccount({
-      sourceChain: baseSepolia,
-      targetChain: optimismSepolia,
-      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
-      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
-    });
-    console.log(bundleStatus);
-  }, 200000);
+  // it("should test omni account with an existing account", async () => {
+  //   const bundleStatus = await omniAccountExistingAccount({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+
+  // it("should test omni account with same chain", async () => {
+  //   const bundleStatus = await omniAccountSameChain({
+  //     sourceChain: baseSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+
+  // it("should test omni account with a swap", async () => {
+  //   const bundleStatus = await omniAccountSwaps({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //     lifiApiKey: process.env.LIFI_API_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
 
   // it("should test omni account with fee calculation", async () => {
   //   const bundleStatus = await omniAccountFeeCalculation({
@@ -167,4 +192,15 @@ describe("Test erc7579 reference implementation", () => {
   //   });
   //   console.log(bundleStatus);
   // }, 200000);
+  //
+  it("should test omni account with deploy on fill", async () => {
+    const bundleStatus = await omniAccountDeployOnFill({
+      sourceChain: baseSepolia,
+      targetChain: optimismSepolia,
+      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+    });
+    console.log(bundleStatus);
+  }, 200000);
 });
