@@ -56,7 +56,9 @@ export default async function main({
   fundingPrivateKey: Hex;
 }) {
   // create a new smart account
-  const owner = privateKeyToAccount(generatePrivateKey());
+  const owner = privateKeyToAccount(process.env.MAINNET_PK! as Hex);
+
+  console.log(owner.address);
 
   const ownableValidator = getOwnableValidator({
     owners: [owner.address],
@@ -167,6 +169,9 @@ export default async function main({
     ],
   });
 
+  console.log(proxyFactory);
+  console.log(factoryData);
+
   // calculate safe address
   // const salt = keccak256(
   //   encodePacked(
@@ -196,10 +201,7 @@ export default async function main({
   const safeAccountAddress = getAddress(slice(result.data!, 12, 32));
 
   // create the orchestrator client
-  const orchestrator = getOrchestrator(
-    orchestratorApiKey,
-    "http://localhost:3000",
-  );
+  const orchestrator = getOrchestrator(orchestratorApiKey);
 
   // fund the smart account
   const fundingAccount = privateKeyToAccount(fundingPrivateKey);
@@ -214,7 +216,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [safeAccountAddress, 100000n],
+      args: [safeAccountAddress, 200000n],
     }),
   });
 
