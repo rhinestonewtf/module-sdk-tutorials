@@ -183,7 +183,7 @@ export default async function main({
     },
     {
       tokenAddress: getTokenAddress("ETH", targetChain.id),
-      amount: parseEther("0.001"),
+      amount: parseEther("0.0001"),
     },
   ];
 
@@ -249,7 +249,7 @@ export default async function main({
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+          args: ["0xF7C012789aac54B5E33EA5b88064ca1F1172De05", 2n],
         }),
       },
     ],
