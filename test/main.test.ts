@@ -24,6 +24,7 @@ import omniAccountSwaps from "../src/orchestrator-sdk/swaps";
 import omniAccountSameChain from "../src/orchestrator-sdk/same-chain";
 import omniAccountDeployOnFill from "../src/orchestrator-sdk/deploy-on-fill";
 import omniAccountMainnet from "../src/orchestrator-sdk/mainnet";
+import omniAccountSmartSessions from "../src/orchestrator-sdk/smart-sessions";
 
 import * as dotenv from "dotenv";
 import { Hex } from "viem";
@@ -206,10 +207,21 @@ describe("Test erc7579 reference implementation", () => {
   //   });
   //   console.log(bundleStatus);
   // }, 200000);
-  it("should test omni account on mainnet", async () => {
-    const bundleStatus = await omniAccountMainnet({
-      sourceChain: mainnet,
-      targetChain: base,
+  // it("should test omni account on mainnet", async () => {
+  //   const bundleStatus = await omniAccountMainnet({
+  //     sourceChain: mainnet,
+  //     targetChain: base,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+
+  it("should test omni account with an existing account", async () => {
+    const bundleStatus = await omniAccountSmartSessions({
+      sourceChain: baseSepolia,
+      targetChain: optimismSepolia,
       orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
       pimlicoApiKey: process.env.PIMLICO_API_KEY!,
       fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,

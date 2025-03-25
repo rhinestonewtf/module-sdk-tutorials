@@ -1,6 +1,16 @@
 import {
+  encodeSmartSessionSignature,
+  encodeValidationData,
   getOwnableValidator,
+  getOwnableValidatorMockSignature,
+  getPermissionId,
+  getSmartSessionsValidator,
+  getSudoPolicy,
+  GLOBAL_CONSTANTS,
+  OWNABLE_VALIDATOR_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS,
+  Session,
+  SmartSessionMode,
 } from "@rhinestone/module-sdk";
 import { createSmartAccountClient } from "permissionless";
 import {
@@ -8,6 +18,7 @@ import {
   ToSafeSmartAccountParameters,
 } from "permissionless/accounts";
 import {
+  Address,
   Chain,
   createPublicClient,
   createWalletClient,
@@ -17,12 +28,21 @@ import {
   erc20Abi,
   Hex,
   http,
+  keccak256,
+  pad,
+  parseEther,
+  toBytes,
+  toHex,
   zeroAddress,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { entryPoint07Address } from "viem/account-abstraction";
+import {
+  entryPoint07Address,
+  getUserOperationHash,
+} from "viem/account-abstraction";
 import {
   BundleStatus,
+  getEmptyUserOp,
   getHookAddress,
   getOrchestrator,
   getOrderBundleHash,
@@ -35,6 +55,8 @@ import {
 } from "@rhinestone/orchestrator-sdk";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
+import { verifyHash } from "viem/actions";
+import { getAccountNonce } from "permissionless/actions";
 
 export default async function main({
   sourceChain,
@@ -55,6 +77,37 @@ export default async function main({
   const ownableValidator = getOwnableValidator({
     owners: [owner.address],
     threshold: 1,
+  });
+
+  const sessionOwner = privateKeyToAccount(generatePrivateKey());
+
+  const session: Session = {
+    sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
+    sessionValidatorInitData: encodeValidationData({
+      threshold: 1,
+      owners: [sessionOwner.address],
+    }),
+    salt: toHex(toBytes("0", { size: 32 })),
+    userOpPolicies: [getSudoPolicy()],
+    erc7739Policies: {
+      allowedERC7739Content: [],
+      erc1271Policies: [],
+    },
+    actions: [
+      {
+        actionTarget: GLOBAL_CONSTANTS.SMART_SESSIONS_FALLBACK_TARGET_FLAG,
+        actionTargetSelector:
+          GLOBAL_CONSTANTS.SMART_SESSIONS_FALLBACK_TARGET_SELECTOR_FLAG,
+        actionPolicies: [getSudoPolicy()],
+      },
+    ],
+    chainId: BigInt(sourceChain.id),
+    permitERC4337Paymaster: true,
+  };
+
+  const smartSessions = getSmartSessionsValidator({
+    sessions: [session],
+    useRegistry: false,
   });
 
   // create the source clients
@@ -95,6 +148,10 @@ export default async function main({
       {
         address: ownableValidator.address,
         context: ownableValidator.initData,
+      },
+      {
+        address: smartSessions.address,
+        context: smartSessions.initData,
       },
     ],
     executors: [
@@ -175,7 +232,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [sourceSafeAccount.address, 20000n],
+      args: [sourceSafeAccount.address, 10000000n],
     }),
   });
 
@@ -251,6 +308,10 @@ export default async function main({
   // construct a token transfer
   const tokenTransfers = [
     {
+      tokenAddress: getTokenAddress("WETH", targetChain.id),
+      amount: parseEther("0.001"),
+    },
+    {
       tokenAddress: getTokenAddress("USDC", targetChain.id),
       amount: 2n,
     },
@@ -261,17 +322,7 @@ export default async function main({
     targetChainId: targetChain.id,
     tokenTransfers: tokenTransfers,
     targetAccount: targetSafeAccount.address,
-    targetExecutions: [
-      {
-        to: getTokenAddress("USDC", targetChain.id),
-        value: 0n,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 1n],
-        }),
-      },
-    ],
+    userOp: getEmptyUserOp(),
   };
 
   const orderPath = await orchestrator.getOrderPath(
@@ -279,13 +330,119 @@ export default async function main({
     targetSafeAccount.address,
   );
 
-  orderPath[0].orderBundle.segments[0].witness.execs = [
-    ...orderPath[0].injectedExecutions,
-    ...metaIntent.targetExecutions,
-  ];
+  // create the userOperation
+  const nonce = await getAccountNonce(targetPublicClient, {
+    address: targetSafeAccount.address,
+    entryPointAddress: entryPoint07Address,
+    key: BigInt(
+      pad(smartSessions.address, {
+        dir: "right",
+        size: 24,
+      }) || 0,
+    ),
+  });
+
+  const usdcSlot = keccak256(
+    encodeAbiParameters(
+      [{ type: "address" }, { type: "uint256" }],
+      [targetSafeAccount.address, 9n],
+    ),
+  );
+
+  const wethSlot = keccak256(
+    encodeAbiParameters(
+      [{ type: "address" }, { type: "uint256" }],
+      [targetSafeAccount.address, 3n],
+    ),
+  );
+
+  const sessionDetails = {
+    mode: SmartSessionMode.USE,
+    permissionId: getPermissionId({ session }),
+    signature: getOwnableValidatorMockSignature({
+      threshold: 1,
+    }),
+  };
+
+  const userOp = await targetSmartAccountClient.prepareUserOperation({
+    account: targetSafeAccount,
+    calls: [
+      ...orderPath[0].injectedExecutions,
+      {
+        to: getTokenAddress("USDC", targetChain.id),
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+        }),
+      },
+    ],
+    nonce: nonce,
+    signature: encodeSmartSessionSignature(sessionDetails),
+    stateOverride: [
+      {
+        address: getTokenAddress("USDC", targetChain.id),
+        stateDiff: [
+          {
+            slot: usdcSlot,
+            value: pad("0xaaaa"),
+          },
+        ],
+      },
+      {
+        address: getTokenAddress("WETH", targetChain.id),
+        stateDiff: [
+          {
+            slot: wethSlot,
+            value: pad(toHex(parseEther("0.01"))),
+          },
+        ],
+      },
+    ],
+  });
+
+  // sign the userOperation
+  const userOpHash = getUserOperationHash({
+    userOperation: userOp,
+    chainId: targetChain.id,
+    entryPointAddress: entryPoint07Address,
+    entryPointVersion: "0.7",
+  });
+
+  sessionDetails.signature = await sessionOwner.signMessage({
+    message: { raw: userOpHash },
+  });
+
+  userOp.signature = encodeSmartSessionSignature(sessionDetails);
+
+  // add userOperation into order bundle
+  orderPath[0].orderBundle.segments[0].witness.userOpHash = userOpHash;
 
   // sign the meta intent
   const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
+
+  // const bundleSignature = await sessionOwner.signMessage({
+  //   message: { raw: orderBundleHash },
+  // });
+  //
+  // const formattedSig = encodeAbiParameters(
+  //   [
+  //     { name: "permissionId", type: "bytes32" },
+  //     { name: "bundleSig", type: "bytes" },
+  //   ],
+  //   [
+  //     getPermissionId({ session }),
+  //     encodePacked(
+  //       ["bytes", "bytes32", "bytes32", "bytes", "uint16"],
+  //       [bundleSignature],
+  //     ),
+  //   ],
+  // );
+  //
+  // const packedSig = encodePacked(
+  //   ["address", "bytes"],
+  //   [smartSessions.address, formattedSig],
+  // );
 
   const bundleSignature = await owner.signMessage({
     message: { raw: orderBundleHash },
@@ -294,6 +451,16 @@ export default async function main({
     ["address", "bytes"],
     [ownableValidator.address, bundleSignature],
   );
+
+  const isValidSig = await verifyHash(targetPublicClient, {
+    address: targetSafeAccount.address,
+    hash: orderBundleHash,
+    signature: packedSig,
+  });
+
+  if (!isValidSig) {
+    throw new Error("Invalid signature");
+  }
 
   const signedOrderBundle: SignedMultiChainCompact = {
     ...orderPath[0].orderBundle,
@@ -308,6 +475,7 @@ export default async function main({
     await orchestrator.postSignedOrderBundle([
       {
         signedOrderBundle,
+        userOp,
       },
     ]);
 
