@@ -1,6 +1,8 @@
 import {
   encodeSmartSessionSignature,
   encodeValidationData,
+  getAccount,
+  getAccountEIP712Domain,
   getOwnableValidator,
   getOwnableValidatorMockSignature,
   getPermissionId,
@@ -421,35 +423,91 @@ export default async function main({
   // sign the meta intent
   const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
 
-  // const bundleSignature = await sessionOwner.signMessage({
-  //   message: { raw: orderBundleHash },
-  // });
-  //
-  // const formattedSig = encodeAbiParameters(
-  //   [
-  //     { name: "permissionId", type: "bytes32" },
-  //     { name: "bundleSig", type: "bytes" },
-  //   ],
-  //   [
-  //     getPermissionId({ session }),
-  //     encodePacked(
-  //       ["bytes", "bytes32", "bytes32", "bytes", "uint16"],
-  //       [bundleSignature],
-  //     ),
-  //   ],
-  // );
-  //
-  // const packedSig = encodePacked(
-  //   ["address", "bytes"],
-  //   [smartSessions.address, formattedSig],
-  // );
+  const appDomainSeparator =
+    "0x681afa780d17da29203322b473d3f210a7d621259a4e6ce9e403f5a266ff719a";
+  const contentsType = "TestMessage(string message)";
 
-  const bundleSignature = await owner.signMessage({
-    message: { raw: orderBundleHash },
+  // Create hash following ERC-7739 TypedDataSign workflow
+  const typedDataSignTypehash = keccak256(
+    encodePacked(
+      ["string"],
+      [
+        "TypedDataSign(TestMessage contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)TestMessage(string message)",
+      ],
+    ),
+  );
+
+  // Original struct hash
+  const structHash = keccak256(encodePacked(["string"], ["Hello World"]));
+
+  let { name, version, chainId, verifyingContract, salt } =
+    await getAccountEIP712Domain({
+      client: targetPublicClient,
+      account: getAccount({
+        address: targetSafeAccount.address,
+        type: "safe",
+      }),
+    });
+
+  // Final hash according to ERC-7739
+  const hash = keccak256(
+    encodePacked(
+      ["bytes2", "bytes32", "bytes32"],
+      [
+        "0x1901",
+        appDomainSeparator,
+        keccak256(
+          encodeAbiParameters(
+            [
+              { name: "a", type: "bytes32" },
+              { name: "b", type: "bytes32" },
+              { name: "c", type: "bytes32" },
+              { name: "d", type: "bytes32" },
+              { name: "e", type: "uint256" },
+              { name: "f", type: "address" },
+              { name: "g", type: "bytes32" },
+            ],
+            [
+              typedDataSignTypehash,
+              structHash,
+              keccak256(encodePacked(["string"], [name])), // name
+              keccak256(encodePacked(["string"], [version])), // version
+              BigInt(Number(chainId)), // chainId
+              verifyingContract, // verifyingContract
+              salt, // salt
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // Sign the hash
+  const signature = await sessionOwner.signMessage({
+    message: { raw: hash },
   });
+
+  // Format signature according to ERC-7739 spec
+  const erc7739Signature = encodePacked(
+    ["bytes", "bytes32", "bytes32", "string", "uint16"],
+    [
+      signature,
+      appDomainSeparator,
+      structHash,
+      contentsType,
+      contentsType.length,
+    ],
+  );
+
+  // Pack with permissionId for smart session
+  const wrappedSignature = encodePacked(
+    ["bytes32", "bytes"],
+    [getPermissionId({ session }), erc7739Signature],
+  );
+
   const packedSig = encodePacked(
     ["address", "bytes"],
-    [ownableValidator.address, bundleSignature],
+    [smartSessions.address, wrappedSignature],
   );
 
   const isValidSig = await verifyHash(targetPublicClient, {
@@ -461,6 +519,14 @@ export default async function main({
   if (!isValidSig) {
     throw new Error("Invalid signature");
   }
+
+  // const bundleSignature = await owner.signMessage({
+  //   message: { raw: orderBundleHash },
+  // });
+  // const packedSig = encodePacked(
+  //   ["address", "bytes"],
+  //   [ownableValidator.address, bundleSignature],
+  // );
 
   const signedOrderBundle: SignedMultiChainCompact = {
     ...orderPath[0].orderBundle,
