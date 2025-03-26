@@ -87,8 +87,14 @@ export default async function main({
     transport: http(),
   });
 
+  // create the source clients
+  const sourcePublicClient = createPublicClient({
+    chain: sourceChain,
+    transport: http(),
+  });
+
   // Get app domain separator from hook
-  const appDomainSeparator = await targetPublicClient.readContract({
+  const appDomainSeparator = await sourcePublicClient.readContract({
     address: getHookAddress(sourceChain.id),
     abi: parseAbi(['function DOMAIN_SEPARATOR() view returns (bytes32)']),
     functionName: 'DOMAIN_SEPARATOR',
@@ -132,12 +138,6 @@ export default async function main({
   const smartSessions = getSmartSessionsValidator({
     sessions: [session],
     useRegistry: false,
-  });
-
-  // create the source clients
-  const sourcePublicClient = createPublicClient({
-    chain: sourceChain,
-    transport: http(),
   });
 
   const factory = '0x000000c3A93d2c5E02Cb053AC675665b1c4217F9';
@@ -389,7 +389,7 @@ export default async function main({
   // sign the meta intent
   const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
 
-  const isContentEnabled = await targetPublicClient.readContract({
+  const isContentEnabled = await sourcePublicClient.readContract({
     address: GLOBAL_CONSTANTS.SMART_SESSIONS_ADDRESS,
     abi: [
       {
@@ -433,7 +433,7 @@ export default async function main({
     verifyingContract,
     salt: salt_,
   } = await getAccountEIP712Domain({
-    client: targetPublicClient,
+    client: sourcePublicClient,
     account: getAccount({
       address: account.address,
       type: 'nexus',
@@ -489,7 +489,7 @@ export default async function main({
 
   const packedSig = encodePacked(['address', 'bytes'], [smartSessions.address, wrappedSignature]);
 
-  const isValidSig = await verifyHash(targetPublicClient, {
+  const isValidSig = await verifyHash(sourcePublicClient, {
     address: account.address,
     hash: orderBundleHash,
     signature: packedSig,
