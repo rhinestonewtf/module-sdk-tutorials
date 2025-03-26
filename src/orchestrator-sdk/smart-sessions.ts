@@ -50,6 +50,7 @@ import {
   MetaIntent,
   PostOrderBundleResult,
   SignedMultiChainCompact,
+  getCompactDomainSeparator,
 } from '@rhinestone/orchestrator-sdk';
 import { erc7579Actions } from 'permissionless/actions/erc7579';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
@@ -79,7 +80,18 @@ export default async function main({
 
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
-  const appDomainSeparator = '0x681afa780d17da29203322b473d3f210a7d621259a4e6ce9e403f5a266ff719a';
+  // create the target clients
+  const targetPublicClient = createPublicClient({
+    chain: targetChain,
+    transport: http(),
+  });
+
+  // Get app domain separator from hook
+  const appDomainSeparator = await targetPublicClient.readContract({
+    address: getHookAddress(sourceChain.id),
+    abi: parseAbi(['function DOMAIN_SEPARATOR() view returns (bytes32)']),
+    functionName: 'DOMAIN_SEPARATOR',
+  });
   const contentsType = 'TestMessage(string message)';
 
   const session: Session = {
@@ -232,12 +244,6 @@ export default async function main({
     hash: deploymentTxHash,
   });
 
-  // create the target clients
-  const targetPublicClient = createPublicClient({
-    chain: targetChain,
-    transport: http(),
-  });
-
   // deploy the target account
   const targetWalletClient = createWalletClient({
     chain: targetChain,
@@ -282,26 +288,6 @@ export default async function main({
       },
     },
   }).extend(erc7579Actions());
-
-  // do a transaction to deploy the account on the target chain and install the modules
-  // const deployUserOpHash = await targetSmartAccountClient.sendUserOperation({
-  //   account: account,
-  //   calls: [
-  //     {
-  //       to: getTokenAddress("USDC", targetChain.id),
-  //       value: BigInt(0),
-  //       data: encodeFunctionData({
-  //         abi: erc20Abi,
-  //         functionName: "balanceOf",
-  //         args: [account.address],
-  //       }),
-  //     },
-  //   ],
-  // });
-  //
-  // await targetPimlicoClient.waitForUserOperationReceipt({
-  //   hash: deployUserOpHash,
-  // });
 
   // construct a token transfer
   const tokenTransfers = [
@@ -446,7 +432,7 @@ export default async function main({
     client: targetPublicClient,
     account: getAccount({
       address: account.address,
-      type: 'safe',
+      type: 'nexus',
     }),
   });
 
@@ -507,6 +493,8 @@ export default async function main({
 
   if (!isValidSig) {
     throw new Error('Invalid signature');
+  } else {
+    console.log('Signature is valid');
   }
 
   // const bundleSignature = await owner.signMessage({
