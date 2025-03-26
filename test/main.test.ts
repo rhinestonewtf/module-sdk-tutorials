@@ -217,7 +217,7 @@ describe("Test erc7579 reference implementation", () => {
   //   console.log(bundleStatus);
   // }, 200000);
 
-  it("should test omni account with an existing account", async () => {
+  it("should test omni account with smart sessions", async () => {
     const bundleStatus = await omniAccountSmartSessions({
       sourceChain: baseSepolia,
       targetChain: optimismSepolia,
