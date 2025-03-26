@@ -51,6 +51,7 @@ import {
   PostOrderBundleResult,
   SignedMultiChainCompact,
   getCompactDomainSeparator,
+  hashMultichainCompactWithoutDomainSeparator,
 } from '@rhinestone/orchestrator-sdk';
 import { erc7579Actions } from 'permissionless/actions/erc7579';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
@@ -92,7 +93,8 @@ export default async function main({
     abi: parseAbi(['function DOMAIN_SEPARATOR() view returns (bytes32)']),
     functionName: 'DOMAIN_SEPARATOR',
   });
-  const contentsType = 'TestMessage(string message)';
+  const contentsType =
+    'MultichainCompact(address sponsor,uint256 nonce,uint256 expires,Segment[] segments)Segment(address arbiter,uint256 chainId,uint256[2][] idsAndAmounts,Witness witness)Witness(address recipient,uint256[2][] tokenOut,uint256 depositId,uint256 targetChain,uint32 fillDeadline,XchainExec[] execs,bytes32 userOpHash,uint32 maxFeeBps)XchainExec(address to,uint256 value,bytes data)';
 
   const session: Session = {
     sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
@@ -106,7 +108,7 @@ export default async function main({
       allowedERC7739Content: [
         {
           appDomainSeparator,
-          contentName: ['TestMessage(string message)'],
+          contentName: [contentsType],
         },
       ],
       erc1271Policies: [
@@ -414,13 +416,15 @@ export default async function main({
     encodePacked(
       ['string'],
       [
-        'TypedDataSign(TestMessage contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)TestMessage(string message)',
+        'TypedDataSign(MultichainCompact contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)'.concat(
+          contentsType
+        ),
       ]
     )
   );
 
   // Original struct hash
-  const structHash = keccak256(encodePacked(['string'], ['Hello World']));
+  const structHash = hashMultichainCompactWithoutDomainSeparator(orderPath[0].orderBundle);
 
   let {
     name,
