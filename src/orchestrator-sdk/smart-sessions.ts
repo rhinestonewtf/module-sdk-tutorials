@@ -14,13 +14,9 @@ import {
   Session,
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode,
-} from "@rhinestone/module-sdk";
-import { createSmartAccountClient } from "permissionless";
-import {
-  toNexusSmartAccount,
-  toSafeSmartAccount,
-  ToSafeSmartAccountParameters,
-} from "permissionless/accounts";
+} from '@rhinestone/module-sdk';
+import { createSmartAccountClient } from 'permissionless';
+import { toNexusSmartAccount, toSafeSmartAccount, ToSafeSmartAccountParameters } from 'permissionless/accounts';
 import {
   Address,
   Chain,
@@ -39,12 +35,9 @@ import {
   toBytes,
   toHex,
   zeroAddress,
-} from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import {
-  entryPoint07Address,
-  getUserOperationHash,
-} from "viem/account-abstraction";
+} from 'viem';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { entryPoint07Address, getUserOperationHash } from 'viem/account-abstraction';
 import {
   BundleStatus,
   getEmptyUserOp,
@@ -57,11 +50,11 @@ import {
   MetaIntent,
   PostOrderBundleResult,
   SignedMultiChainCompact,
-} from "@rhinestone/orchestrator-sdk";
-import { erc7579Actions } from "permissionless/actions/erc7579";
-import { createPimlicoClient } from "permissionless/clients/pimlico";
-import { verifyHash } from "viem/actions";
-import { getAccountNonce } from "permissionless/actions";
+} from '@rhinestone/orchestrator-sdk';
+import { erc7579Actions } from 'permissionless/actions/erc7579';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
+import { verifyHash } from 'viem/actions';
+import { getAccountNonce } from 'permissionless/actions';
 
 export default async function main({
   sourceChain,
@@ -86,23 +79,35 @@ export default async function main({
 
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
+  const appDomainSeparator = '0x681afa780d17da29203322b473d3f210a7d621259a4e6ce9e403f5a266ff719a';
+  const contentsType = 'TestMessage(string message)';
+
   const session: Session = {
     sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
     sessionValidatorInitData: encodeValidationData({
       threshold: 1,
       owners: [sessionOwner.address],
     }),
-    salt: toHex(toBytes("0", { size: 32 })),
+    salt: toHex(toBytes('0', { size: 32 })),
     userOpPolicies: [getSudoPolicy()],
     erc7739Policies: {
-      allowedERC7739Content: [],
-      erc1271Policies: [],
+      allowedERC7739Content: [
+        {
+          appDomainSeparator,
+          contentName: ['TestMessage(string message)'],
+        },
+      ],
+      erc1271Policies: [
+        {
+          policy: getSudoPolicy().address,
+          initData: '0x',
+        },
+      ],
     },
     actions: [
       {
         actionTarget: GLOBAL_CONSTANTS.SMART_SESSIONS_FALLBACK_TARGET_FLAG,
-        actionTargetSelector:
-          GLOBAL_CONSTANTS.SMART_SESSIONS_FALLBACK_TARGET_SELECTOR_FLAG,
+        actionTargetSelector: GLOBAL_CONSTANTS.SMART_SESSIONS_FALLBACK_TARGET_SELECTOR_FLAG,
         actionPolicies: [getSudoPolicy()],
       },
     ],
@@ -121,18 +126,18 @@ export default async function main({
     transport: http(),
   });
 
-  const factory = "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9";
-  const salt = keccak256("0x01");
+  const factory = '0x000000c3A93d2c5E02Cb053AC675665b1c4217F9';
+  const salt = keccak256('0x01');
   const initData = encodeAbiParameters(
-    [{ type: "address" }, { type: "bytes" }],
+    [{ type: 'address' }, { type: 'bytes' }],
     [
-      "0x879fa30248eeb693dcCE3eA94a743622170a3658",
+      '0x879fa30248eeb693dcCE3eA94a743622170a3658',
       encodeFunctionData({
         abi: parseAbi([
-          "struct BootstrapConfig {address module;bytes initData;}",
-          "function initNexus(BootstrapConfig[] calldata validators,BootstrapConfig[] calldata executors,BootstrapConfig calldata hook,BootstrapConfig[] calldata fallbacks,address registry,address[] calldata attesters,uint8 threshold) external",
+          'struct BootstrapConfig {address module;bytes initData;}',
+          'function initNexus(BootstrapConfig[] calldata validators,BootstrapConfig[] calldata executors,BootstrapConfig calldata hook,BootstrapConfig[] calldata fallbacks,address registry,address[] calldata attesters,uint8 threshold) external',
         ]),
-        functionName: "initNexus",
+        functionName: 'initNexus',
         args: [
           [
             {
@@ -147,42 +152,36 @@ export default async function main({
           [
             {
               module: getSameChainModuleAddress(targetChain.id),
-              initData: "0x",
+              initData: '0x',
             },
             {
               module: getTargetModuleAddress(targetChain.id),
-              initData: "0x",
+              initData: '0x',
             },
             {
               module: getHookAddress(targetChain.id),
-              initData: "0x",
+              initData: '0x',
             },
           ],
           {
             module: getHookAddress(targetChain.id),
-            initData: encodeAbiParameters(
-              [{ name: "value", type: "bool" }],
-              [true],
-            ),
+            initData: encodeAbiParameters([{ name: 'value', type: 'bool' }], [true]),
           },
           [
             {
               module: getTargetModuleAddress(targetChain.id),
-              initData: encodePacked(
-                ["bytes4", "bytes1", "bytes"],
-                ["0x3a5be8cb", "0x00", "0x"],
-              ),
+              initData: encodePacked(['bytes4', 'bytes1', 'bytes'], ['0x3a5be8cb', '0x00', '0x']),
             },
           ],
-          "0x000000000069E2a187AEFFb852bF3cCdC95151B2",
+          '0x000000000069E2a187AEFFb852bF3cCdC95151B2',
           [
             RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
-            "0x6D0515e8E499468DCe9583626f0cA15b887f9d03", // Mock attester for omni account
+            '0x6D0515e8E499468DCe9583626f0cA15b887f9d03', // Mock attester for omni account
           ],
           1,
         ],
       }),
-    ],
+    ]
   );
 
   const publicClient = createPublicClient({
@@ -191,10 +190,8 @@ export default async function main({
   });
   const accountAddress = await publicClient.readContract({
     address: factory,
-    abi: parseAbi([
-      "function computeAccountAddress(bytes,bytes32) returns (address)",
-    ]),
-    functionName: "computeAccountAddress",
+    abi: parseAbi(['function computeAccountAddress(bytes,bytes32) returns (address)']),
+    functionName: 'computeAccountAddress',
     args: [initData, salt],
   });
 
@@ -210,10 +207,10 @@ export default async function main({
 
   const fundingTxHash = await sourceWalletClient.sendTransaction({
     account: fundingAccount,
-    to: getTokenAddress("USDC", sourceChain.id),
+    to: getTokenAddress('USDC', sourceChain.id),
     data: encodeFunctionData({
       abi: erc20Abi,
-      functionName: "transfer",
+      functionName: 'transfer',
       args: [accountAddress, 10000000n],
     }),
   });
@@ -226,8 +223,8 @@ export default async function main({
   const deploymentTxHash = await sourceWalletClient.writeContract({
     account: fundingAccount,
     address: factory,
-    abi: parseAbi(["function createAccount(bytes,bytes32)"]),
-    functionName: "createAccount",
+    abi: parseAbi(['function createAccount(bytes,bytes32)']),
+    functionName: 'createAccount',
     args: [initData, salt],
   });
 
@@ -250,8 +247,8 @@ export default async function main({
   const targetDeploymentTxHash = await targetWalletClient.writeContract({
     account: fundingAccount,
     address: factory,
-    abi: parseAbi(["function createAccount(bytes,bytes32) returns (address)"]),
-    functionName: "createAccount",
+    abi: parseAbi(['function createAccount(bytes,bytes32) returns (address)']),
+    functionName: 'createAccount',
     args: [initData, salt],
   });
 
@@ -260,28 +257,24 @@ export default async function main({
   });
 
   const targetPimlicoClient = createPimlicoClient({
-    transport: http(
-      `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
-    ),
+    transport: http(`https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`),
     entryPoint: {
       address: entryPoint07Address,
-      version: "0.7",
+      version: '0.7',
     },
   });
 
-  const targetSafeAccount = await toNexusSmartAccount({
+  const account = await toNexusSmartAccount({
     owners: [owner],
     address: accountAddress,
     client: targetPublicClient,
-    version: "1.0.0",
+    version: '1.0.0',
   });
 
   const targetSmartAccountClient = createSmartAccountClient({
-    account: targetSafeAccount,
+    account: account,
     chain: targetChain,
-    bundlerTransport: http(
-      `https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`,
-    ),
+    bundlerTransport: http(`https://api.pimlico.io/v2/${targetChain.id}/rpc?apikey=${pimlicoApiKey}`),
     paymaster: targetPimlicoClient,
     userOperation: {
       estimateFeesPerGas: async () => {
@@ -292,7 +285,7 @@ export default async function main({
 
   // do a transaction to deploy the account on the target chain and install the modules
   // const deployUserOpHash = await targetSmartAccountClient.sendUserOperation({
-  //   account: targetSafeAccount,
+  //   account: account,
   //   calls: [
   //     {
   //       to: getTokenAddress("USDC", targetChain.id),
@@ -300,7 +293,7 @@ export default async function main({
   //       data: encodeFunctionData({
   //         abi: erc20Abi,
   //         functionName: "balanceOf",
-  //         args: [targetSafeAccount.address],
+  //         args: [account.address],
   //       }),
   //     },
   //   ],
@@ -313,11 +306,11 @@ export default async function main({
   // construct a token transfer
   const tokenTransfers = [
     {
-      tokenAddress: getTokenAddress("WETH", targetChain.id),
-      amount: parseEther("0.001"),
+      tokenAddress: getTokenAddress('WETH', targetChain.id),
+      amount: parseEther('0.001'),
     },
     {
-      tokenAddress: getTokenAddress("USDC", targetChain.id),
+      tokenAddress: getTokenAddress('USDC', targetChain.id),
       amount: 2n,
     },
   ];
@@ -326,40 +319,22 @@ export default async function main({
   const metaIntent: MetaIntent = {
     targetChainId: targetChain.id,
     tokenTransfers: tokenTransfers,
-    targetAccount: targetSafeAccount.address,
+    targetAccount: account.address,
     userOp: getEmptyUserOp(),
   };
 
-  const orderPath = await orchestrator.getOrderPath(
-    metaIntent,
-    targetSafeAccount.address,
-  );
+  const orderPath = await orchestrator.getOrderPath(metaIntent, account.address);
 
   // create the userOperation
   const nonce = await getAccountNonce(targetPublicClient, {
-    address: targetSafeAccount.address,
+    address: account.address,
     entryPointAddress: entryPoint07Address,
-    key: BigInt(
-      encodePacked(
-        ["bytes3", "bytes1", "address"],
-        ["0x000000", "0x00", SMART_SESSIONS_ADDRESS],
-      ),
-    ),
+    key: BigInt(encodePacked(['bytes3', 'bytes1', 'address'], ['0x000000', '0x00', SMART_SESSIONS_ADDRESS])),
   });
 
-  const usdcSlot = keccak256(
-    encodeAbiParameters(
-      [{ type: "address" }, { type: "uint256" }],
-      [targetSafeAccount.address, 9n],
-    ),
-  );
+  const usdcSlot = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'uint256' }], [account.address, 9n]));
 
-  const wethSlot = keccak256(
-    encodeAbiParameters(
-      [{ type: "address" }, { type: "uint256" }],
-      [targetSafeAccount.address, 3n],
-    ),
-  );
+  const wethSlot = keccak256(encodeAbiParameters([{ type: 'address' }, { type: 'uint256' }], [account.address, 3n]));
 
   const sessionDetails = {
     mode: SmartSessionMode.USE,
@@ -370,15 +345,15 @@ export default async function main({
   };
 
   const userOp = await targetSmartAccountClient.prepareUserOperation({
-    account: targetSafeAccount,
+    account: account,
     calls: [
       ...orderPath[0].injectedExecutions,
       {
-        to: getTokenAddress("USDC", targetChain.id),
+        to: getTokenAddress('USDC', targetChain.id),
         data: encodeFunctionData({
           abi: erc20Abi,
-          functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+          functionName: 'transfer',
+          args: ['0xd8da6bf26964af9d7eed9e03e53415d37aa96045', 2n],
         }),
       },
     ],
@@ -386,20 +361,20 @@ export default async function main({
     signature: encodeSmartSessionSignature(sessionDetails),
     stateOverride: [
       {
-        address: getTokenAddress("USDC", targetChain.id),
+        address: getTokenAddress('USDC', targetChain.id),
         stateDiff: [
           {
             slot: usdcSlot,
-            value: pad("0xaaaa"),
+            value: pad('0xaaaa'),
           },
         ],
       },
       {
-        address: getTokenAddress("WETH", targetChain.id),
+        address: getTokenAddress('WETH', targetChain.id),
         stateDiff: [
           {
             slot: wethSlot,
-            value: pad(toHex(parseEther("0.01"))),
+            value: pad(toHex(parseEther('0.01'))),
           },
         ],
       },
@@ -411,7 +386,7 @@ export default async function main({
     userOperation: userOp,
     chainId: targetChain.id,
     entryPointAddress: entryPoint07Address,
-    entryPointVersion: "0.7",
+    entryPointVersion: '0.7',
   });
 
   sessionDetails.signature = await sessionOwner.signMessage({
@@ -426,140 +401,141 @@ export default async function main({
   // sign the meta intent
   const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
 
-  // const appDomainSeparator =
-  //   "0x681afa780d17da29203322b473d3f210a7d621259a4e6ce9e403f5a266ff719a";
-  // const contentsType = "TestMessage(string message)";
-  //
-  // // Create hash following ERC-7739 TypedDataSign workflow
-  // const typedDataSignTypehash = keccak256(
-  //   encodePacked(
-  //     ["string"],
-  //     [
-  //       "TypedDataSign(TestMessage contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)TestMessage(string message)",
-  //     ],
-  //   ),
-  // );
-  //
-  // // Original struct hash
-  // const structHash = keccak256(encodePacked(["string"], ["Hello World"]));
-  //
-  // let { name, version, chainId, verifyingContract, salt } =
-  //   await getAccountEIP712Domain({
-  //     client: targetPublicClient,
-  //     account: getAccount({
-  //       address: targetSafeAccount.address,
-  //       type: "safe",
-  //     }),
-  //   });
-  //
-  // // Final hash according to ERC-7739
-  // const hash = keccak256(
-  //   encodePacked(
-  //     ["bytes2", "bytes32", "bytes32"],
-  //     [
-  //       "0x1901",
-  //       appDomainSeparator,
-  //       keccak256(
-  //         encodeAbiParameters(
-  //           [
-  //             { name: "a", type: "bytes32" },
-  //             { name: "b", type: "bytes32" },
-  //             { name: "c", type: "bytes32" },
-  //             { name: "d", type: "bytes32" },
-  //             { name: "e", type: "uint256" },
-  //             { name: "f", type: "address" },
-  //             { name: "g", type: "bytes32" },
-  //           ],
-  //           [
-  //             typedDataSignTypehash,
-  //             structHash,
-  //             keccak256(encodePacked(["string"], [name])), // name
-  //             keccak256(encodePacked(["string"], [version])), // version
-  //             BigInt(Number(chainId)), // chainId
-  //             verifyingContract, // verifyingContract
-  //             salt, // salt
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   ),
-  // );
-  //
-  // // Sign the hash
-  // const signature = await sessionOwner.signMessage({
-  //   message: { raw: hash },
-  // });
-  //
-  // // Format signature according to ERC-7739 spec
-  // const erc7739Signature = encodePacked(
-  //   ["bytes", "bytes32", "bytes32", "string", "uint16"],
-  //   [
-  //     signature,
-  //     appDomainSeparator,
-  //     structHash,
-  //     contentsType,
-  //     contentsType.length,
-  //   ],
-  // );
-  //
-  // // Pack with permissionId for smart session
-  // const wrappedSignature = encodePacked(
-  //   ["bytes32", "bytes"],
-  //   [getPermissionId({ session }), erc7739Signature],
-  // );
-  //
-  // const packedSig = encodePacked(
-  //   ["address", "bytes"],
-  //   [smartSessions.address, wrappedSignature],
-  // );
-  //
-  // const isValidSig = await verifyHash(targetPublicClient, {
-  //   address: targetSafeAccount.address,
-  //   hash: orderBundleHash,
-  //   signature: packedSig,
-  // });
-  //
-  // if (!isValidSig) {
-  //   throw new Error("Invalid signature");
-  // }
-
-  const bundleSignature = await owner.signMessage({
-    message: { raw: orderBundleHash },
+  const isContentEnabled = await targetPublicClient.readContract({
+    address: GLOBAL_CONSTANTS.SMART_SESSIONS_ADDRESS,
+    abi: [
+      {
+        inputs: [
+          { name: 'account', type: 'address' },
+          { name: 'permissionId', type: 'bytes32' },
+          { name: 'appDomainSeparator', type: 'bytes32' },
+          { name: 'content', type: 'string' },
+        ],
+        name: 'isERC7739ContentEnabled',
+        outputs: [{ type: 'bool' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ],
+    functionName: 'isERC7739ContentEnabled',
+    args: [account.address, getPermissionId({ session }), appDomainSeparator, contentsType],
   });
-  const packedSig = encodePacked(
-    ["address", "bytes"],
-    [ownableValidator.address, bundleSignature],
+
+  console.log('Is content enabled:', isContentEnabled);
+
+  // Create hash following ERC-7739 TypedDataSign workflow
+  const typedDataSignTypehash = keccak256(
+    encodePacked(
+      ['string'],
+      [
+        'TypedDataSign(TestMessage contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)TestMessage(string message)',
+      ]
+    )
   );
+
+  // Original struct hash
+  const structHash = keccak256(encodePacked(['string'], ['Hello World']));
+
+  let {
+    name,
+    version,
+    chainId,
+    verifyingContract,
+    salt: salt_,
+  } = await getAccountEIP712Domain({
+    client: targetPublicClient,
+    account: getAccount({
+      address: account.address,
+      type: 'safe',
+    }),
+  });
+
+  // Final hash according to ERC-7739
+  const hash = keccak256(
+    encodePacked(
+      ['bytes2', 'bytes32', 'bytes32'],
+      [
+        '0x1901',
+        appDomainSeparator,
+        keccak256(
+          encodeAbiParameters(
+            [
+              { name: 'a', type: 'bytes32' },
+              { name: 'b', type: 'bytes32' },
+              { name: 'c', type: 'bytes32' },
+              { name: 'd', type: 'bytes32' },
+              { name: 'e', type: 'uint256' },
+              { name: 'f', type: 'address' },
+              { name: 'g', type: 'bytes32' },
+            ],
+            [
+              typedDataSignTypehash,
+              structHash,
+              keccak256(encodePacked(['string'], [name])), // name
+              keccak256(encodePacked(['string'], [version])), // version
+              BigInt(Number(chainId)), // chainId
+              verifyingContract, // verifyingContract
+              salt_, // salt
+            ]
+          )
+        ),
+      ]
+    )
+  );
+
+  // Sign the hash
+  const signature = await sessionOwner.signMessage({
+    message: { raw: hash },
+  });
+
+  // Format signature according to ERC-7739 spec
+  const erc7739Signature = encodePacked(
+    ['bytes', 'bytes32', 'bytes32', 'string', 'uint16'],
+    [signature, appDomainSeparator, structHash, contentsType, contentsType.length]
+  );
+
+  // Pack with permissionId for smart session
+  const wrappedSignature = encodePacked(['bytes32', 'bytes'], [getPermissionId({ session }), erc7739Signature]);
+
+  const packedSig = encodePacked(['address', 'bytes'], [smartSessions.address, wrappedSignature]);
+
+  const isValidSig = await verifyHash(targetPublicClient, {
+    address: account.address,
+    hash: orderBundleHash,
+    signature: packedSig,
+  });
+
+  if (!isValidSig) {
+    throw new Error('Invalid signature');
+  }
+
+  // const bundleSignature = await owner.signMessage({
+  //   message: { raw: orderBundleHash },
+  // });
+  // const packedSig = encodePacked(['address', 'bytes'], [ownableValidator.address, bundleSignature]);
 
   const signedOrderBundle: SignedMultiChainCompact = {
     ...orderPath[0].orderBundle,
-    originSignatures: Array(orderPath[0].orderBundle.segments.length).fill(
-      packedSig,
-    ),
+    originSignatures: Array(orderPath[0].orderBundle.segments.length).fill(packedSig),
     targetSignature: packedSig,
   };
 
   // send the signed bundle
-  const bundleResults: PostOrderBundleResult =
-    await orchestrator.postSignedOrderBundle([
-      {
-        signedOrderBundle,
-        userOp,
-      },
-    ]);
+  const bundleResults: PostOrderBundleResult = await orchestrator.postSignedOrderBundle([
+    {
+      signedOrderBundle,
+      userOp,
+    },
+  ]);
 
   // check bundle status
-  let bundleStatus = await orchestrator.getBundleStatus(
-    bundleResults[0].bundleId,
-  );
+  let bundleStatus = await orchestrator.getBundleStatus(bundleResults[0].bundleId);
 
   // check again every 2 seconds until the status changes
   // // @ts-ignore
   while (bundleStatus.status === BundleStatus.PENDING) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    bundleStatus = await orchestrator.getBundleStatus(
-      bundleResults[0].bundleId,
-    );
+    bundleStatus = await orchestrator.getBundleStatus(bundleResults[0].bundleId);
     console.log(bundleStatus);
   }
 
