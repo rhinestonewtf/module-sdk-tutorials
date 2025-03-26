@@ -46,13 +46,11 @@ export default async function main({
   sourceChain,
   targetChain,
   orchestratorApiKey,
-  pimlicoApiKey,
   fundingPrivateKey,
 }: {
   sourceChain: Chain;
   targetChain: Chain;
   orchestratorApiKey: string;
-  pimlicoApiKey: string;
   fundingPrivateKey: Hex;
 }) {
   // create a new smart account

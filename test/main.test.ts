@@ -202,7 +202,6 @@ describe("Test erc7579 reference implementation", () => {
   //     sourceChain: baseSepolia,
   //     targetChain: optimismSepolia,
   //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
   //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
   //   });
   //   console.log(bundleStatus);
