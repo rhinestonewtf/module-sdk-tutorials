@@ -237,12 +237,14 @@ export default async function main({
 
   const fundingTxHash = await sourceWalletClient.sendTransaction({
     account: fundingAccount,
-    to: getTokenAddress("USDC", sourceChain.id),
-    data: encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "transfer",
-      args: [accountAddress, 10000000n],
-    }),
+    to: accountAddress,
+    value: 10000000000000000n,
+    // to: getTokenAddress("USDC", sourceChain.id),
+    // data: encodeFunctionData({
+    //   abi: erc20Abi,
+    //   functionName: "transfer",
+    //   args: [accountAddress, 10000000n],
+    // }),
   });
 
   await sourcePublicClient.waitForTransactionReceipt({
@@ -318,8 +320,8 @@ export default async function main({
       amount: parseEther("0.001"),
     },
     {
-      tokenAddress: getTokenAddress("USDC", targetChain.id),
-      amount: 2n,
+      tokenAddress: getTokenAddress("ETH", targetChain.id),
+      amount: 10000000000000n,
     },
   ];
 
@@ -375,12 +377,15 @@ export default async function main({
     calls: [
       ...orderPath[0].injectedExecutions,
       {
-        to: getTokenAddress("USDC", targetChain.id),
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
-        }),
+        to: "0xF7C012789aac54B5E33EA5b88064ca1F1172De05",
+        value: BigInt(10000000000000),
+        data: "0x00000000",
+        // to: getTokenAddress("USDC", targetChain.id),
+        // data: encodeFunctionData({
+        //   abi: erc20Abi,
+        //   functionName: "transfer",
+        //   args: ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 2n],
+        // }),
       },
     ],
     nonce: nonce,
@@ -403,6 +408,10 @@ export default async function main({
             value: pad(toHex(parseEther("0.01"))),
           },
         ],
+      },
+      {
+        address: account.address,
+        balance: BigInt(10000000000000),
       },
     ],
   });
