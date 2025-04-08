@@ -121,23 +121,23 @@ export default async function main({
         context: "0x",
       },
     ],
-    hooks: [
-      {
-        address: getHookAddress(targetChain.id),
-        context: encodeAbiParameters(
-          [
-            { name: "hookType", type: "uint256" },
-            { name: "hookId", type: "bytes4" },
-            { name: "data", type: "bytes" },
-          ],
-          [
-            0n,
-            "0x00000000",
-            encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
-          ],
-        ),
-      },
-    ],
+    // hooks: [
+    //   {
+    //     address: getHookAddress(targetChain.id),
+    //     context: encodeAbiParameters(
+    //       [
+    //         { name: "hookType", type: "uint256" },
+    //         { name: "hookId", type: "bytes4" },
+    //         { name: "data", type: "bytes" },
+    //       ],
+    //       [
+    //         0n,
+    //         "0x00000000",
+    //         encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+    //       ],
+    //     ),
+    //   },
+    // ],
     fallbacks: [
       {
         address: getTargetModuleAddress(targetChain.id),
@@ -185,7 +185,7 @@ export default async function main({
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "transfer",
-      args: [sourceSafeAccount.address, 10000000n],
+      args: [sourceSafeAccount.address, 1000000n],
     }),
   });
 
@@ -241,7 +241,7 @@ export default async function main({
   const tokenTransfers = [
     {
       tokenAddress: getTokenAddress("WETH", targetChain.id),
-      amount: parseEther("0.001"),
+      amount: parseEther("0.0001"),
     },
     {
       tokenAddress: getTokenAddress("USDC", targetChain.id),
@@ -291,7 +291,10 @@ export default async function main({
   const userOp = await targetSmartAccountClient.prepareUserOperation({
     account: targetSafeAccount,
     calls: [
-      ...orderPath[0].injectedExecutions,
+      // remove any injected execution with the hook as target
+      ...orderPath[0].injectedExecutions.filter(
+        (e) => e.to !== getHookAddress(targetChain.id),
+      ),
       {
         to: getTokenAddress("USDC", targetChain.id),
         data: encodeFunctionData({

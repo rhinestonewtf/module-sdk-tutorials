@@ -111,23 +111,23 @@ export default async function main({
         context: "0x",
       },
     ],
-    hooks: [
-      {
-        address: getHookAddress(targetChain.id),
-        context: encodeAbiParameters(
-          [
-            { name: "hookType", type: "uint256" },
-            { name: "hookId", type: "bytes4" },
-            { name: "data", type: "bytes" },
-          ],
-          [
-            0n,
-            "0x00000000",
-            encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
-          ],
-        ),
-      },
-    ],
+    // hooks: [
+    //   {
+    //     address: getHookAddress(targetChain.id),
+    //     context: encodeAbiParameters(
+    //       [
+    //         { name: "hookType", type: "uint256" },
+    //         { name: "hookId", type: "bytes4" },
+    //         { name: "data", type: "bytes" },
+    //       ],
+    //       [
+    //         0n,
+    //         "0x00000000",
+    //         encodeAbiParameters([{ name: "value", type: "bool" }], [true]),
+    //       ],
+    //     ),
+    //   },
+    // ],
     fallbacks: [
       {
         address: getTargetModuleAddress(targetChain.id),
@@ -279,10 +279,10 @@ export default async function main({
     targetSafeAccount.address,
   );
 
-  orderPath[0].orderBundle.segments[0].witness.execs = [
-    ...orderPath[0].injectedExecutions,
-    ...metaIntent.targetExecutions,
-  ];
+  // orderPath[0].orderBundle.segments[0].witness.execs = [
+  //   ...orderPath[0].injectedExecutions,
+  //   ...metaIntent.targetExecutions,
+  // ];
 
   // sign the meta intent
   const orderBundleHash = getOrderBundleHash(orderPath[0].orderBundle);
