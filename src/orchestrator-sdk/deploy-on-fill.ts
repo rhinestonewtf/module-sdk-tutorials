@@ -38,7 +38,7 @@ import {
   MetaIntent,
   PostOrderBundleResult,
   SignedMultiChainCompact,
-} from "@rhinestone/orchestrator-sdk";
+} from "@rhinestone/sdk/orchestrator";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 
@@ -94,21 +94,21 @@ export default async function main({
           ],
           [
             {
-              module: getSameChainModuleAddress(targetChain.id),
+              module: getSameChainModuleAddress(),
               initData: "0x",
             },
             {
-              module: getTargetModuleAddress(targetChain.id),
+              module: getTargetModuleAddress(),
               initData: "0x",
             },
             {
-              module: getHookAddress(targetChain.id),
+              module: getHookAddress(),
               initData: "0x",
             },
           ],
           [
             {
-              module: getTargetModuleAddress(targetChain.id),
+              module: getTargetModuleAddress(),
               initData: encodeAbiParameters(
                 [
                   { name: "selector", type: "bytes4" },
@@ -121,7 +121,7 @@ export default async function main({
           ],
           [
             {
-              module: getHookAddress(targetChain.id),
+              module: getHookAddress(),
               initData: encodeAbiParameters(
                 [
                   { name: "hookType", type: "uint256" },

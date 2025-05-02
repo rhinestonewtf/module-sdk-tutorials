@@ -59,7 +59,7 @@ import {
   SignedMultiChainCompact,
   getCompactDomainSeparator,
   hashMultichainCompactWithoutDomainSeparator,
-} from "@rhinestone/orchestrator-sdk";
+} from "@rhinestone/sdk/orchestrator";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import { verifyHash } from "viem/actions";
@@ -102,7 +102,7 @@ export default async function main({
 
   // Get app domain separator from hook
   const appDomainSeparator = await sourcePublicClient.readContract({
-    address: getHookAddress(sourceChain.id),
+    address: getHookAddress(),
     abi: parseAbi(["function DOMAIN_SEPARATOR() view returns (bytes32)"]),
     functionName: "DOMAIN_SEPARATOR",
   });
@@ -173,20 +173,20 @@ export default async function main({
           ],
           [
             {
-              module: getSameChainModuleAddress(targetChain.id),
+              module: getSameChainModuleAddress(),
               initData: "0x",
             },
             {
-              module: getTargetModuleAddress(targetChain.id),
+              module: getTargetModuleAddress(),
               initData: "0x",
             },
             {
-              module: getHookAddress(targetChain.id),
+              module: getHookAddress(),
               initData: "0x",
             },
           ],
           {
-            module: getHookAddress(targetChain.id),
+            module: getHookAddress(),
             initData: encodeAbiParameters(
               [{ name: "value", type: "bool" }],
               [true],
@@ -194,7 +194,7 @@ export default async function main({
           },
           [
             {
-              module: getTargetModuleAddress(targetChain.id),
+              module: getTargetModuleAddress(),
               initData: encodePacked(
                 ["bytes4", "bytes1", "bytes"],
                 ["0x3a5be8cb", "0x00", "0x"],

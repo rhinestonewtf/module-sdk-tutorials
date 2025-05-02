@@ -22,7 +22,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { entryPoint07Address } from "viem/account-abstraction";
 import {
-  BundleStatus,
+  BUNDLE_STATUS_PENDING,
   getHookAddress,
   getOrchestrator,
   getOrderBundleHash,
@@ -32,7 +32,7 @@ import {
   MetaIntent,
   PostOrderBundleResult,
   SignedMultiChainCompact,
-} from "@rhinestone/orchestrator-sdk";
+} from "@rhinestone/sdk/orchestrator";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 
@@ -99,21 +99,21 @@ export default async function main({
     ],
     executors: [
       {
-        address: getSameChainModuleAddress(targetChain.id),
+        address: getSameChainModuleAddress(),
         context: "0x",
       },
       {
-        address: getTargetModuleAddress(targetChain.id),
+        address: getTargetModuleAddress(),
         context: "0x",
       },
       {
-        address: getHookAddress(targetChain.id),
+        address: getHookAddress(),
         context: "0x",
       },
     ],
     hooks: [
       {
-        address: getHookAddress(targetChain.id),
+        address: getHookAddress(),
         context: encodeAbiParameters(
           [
             { name: "hookType", type: "uint256" },
@@ -130,7 +130,7 @@ export default async function main({
     ],
     fallbacks: [
       {
-        address: getTargetModuleAddress(targetChain.id),
+        address: getTargetModuleAddress(),
         context: encodeAbiParameters(
           [
             { name: "selector", type: "bytes4" },
@@ -318,7 +318,7 @@ export default async function main({
 
   // check again every 2 seconds until the status changes
   // // @ts-ignore
-  while (bundleStatus.status === BundleStatus.PENDING) {
+  while (bundleStatus.status === BUNDLE_STATUS_PENDING) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     bundleStatus = await orchestrator.getBundleStatus(
       bundleResults[0].bundleId,

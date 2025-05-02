@@ -31,6 +31,7 @@ import {
   getUserOperationHash,
 } from "viem/account-abstraction";
 import {
+  BUNDLE_STATUS_PENDING,
   BundleStatus,
   getEmptyUserOp,
   getHookAddress,
@@ -42,7 +43,7 @@ import {
   MetaIntent,
   PostOrderBundleResult,
   SignedMultiChainCompact,
-} from "@rhinestone/orchestrator-sdk";
+} from "@rhinestone/sdk/orchestrator";
 import { erc7579Actions } from "permissionless/actions/erc7579";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import { getAccountNonce } from "permissionless/actions";
@@ -332,7 +333,7 @@ export default async function main({
 
   // check again every 2 seconds until the status changes
   // // @ts-ignore
-  while (bundleStatus.status === BundleStatus.PENDING) {
+  while (bundleStatus.status === BUNDLE_STATUS_PENDING) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     bundleStatus = await orchestrator.getBundleStatus(
       bundleResults[0].bundleId,
