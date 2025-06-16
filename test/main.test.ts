@@ -232,5 +232,5 @@ describe("Test erc7579 reference implementation", () => {
       chains: [sepolia, baseSepolia],
     });
     expect(receipt.success).toBe(true);
-  }, 40000);
+  }, 80000);
 });

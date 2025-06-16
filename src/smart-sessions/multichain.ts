@@ -15,6 +15,7 @@ import {
   SmartSessionMode,
   getPermissionId,
   GLOBAL_CONSTANTS,
+  getSessionNonce,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -258,6 +259,34 @@ export default async function main({ chains }: { chains: Chain[] }) {
     permitERC4337Paymaster: true,
   };
 
+  const sessionNonces = [];
+
+  sessionNonces.push(
+    await getSessionNonce({
+      client: publicClient1,
+      account: getAccount({
+        address: safeAccount.address,
+        type: "safe",
+      }),
+      permissionId: getPermissionId({
+        session: session1,
+      }),
+    }),
+  );
+
+  sessionNonces.push(
+    await getSessionNonce({
+      client: publicClient2,
+      account: getAccount({
+        address: safeAccount2.address,
+        type: "safe",
+      }),
+      permissionId: getPermissionId({
+        session: session2,
+      }),
+    }),
+  );
+
   const sessionDetailsArgs = {
     sessions: [session1, session2],
     account: getAccount({
@@ -268,7 +297,10 @@ export default async function main({ chains }: { chains: Chain[] }) {
     permitGenericPolicy: true,
   };
 
-  const sessionDetails = await getEnableSessionDetails(sessionDetailsArgs);
+  const sessionDetails = await getEnableSessionDetails({
+    ...sessionDetailsArgs,
+    sessionIndex: 0,
+  });
 
   sessionDetails.signature = getOwnableValidatorMockSignature({
     threshold: 1,
@@ -340,6 +372,7 @@ export default async function main({ chains }: { chains: Chain[] }) {
   const sessionDetails2 = await getEnableSessionDetails({
     ...sessionDetailsArgs,
     sessionIndex: 1,
+    sessionNonces,
   });
 
   sessionDetails2.signature = getOwnableValidatorMockSignature({
@@ -348,11 +381,23 @@ export default async function main({ chains }: { chains: Chain[] }) {
 
   console.log(sessionDetails.permissionEnableHash);
   console.log(sessionDetails2.permissionEnableHash);
+  console.log(sessionNonces);
 
   sessionDetails2.enableSessionData.enableSession.permissionEnableSig =
     sessionDetails.enableSessionData.enableSession.permissionEnableSig;
 
-  const nonce2 = await getAccountNonce(publicClient1, {
+  const userOp2 = await smartAccountClient2.sendUserOperation({
+    calls: [
+      {
+        to: zeroAddress,
+        data: "0x",
+      },
+    ],
+  });
+
+  await pimlicoClient2.waitForUserOperationReceipt({ hash: userOp2 });
+
+  const nonce2 = await getAccountNonce(publicClient2, {
     address: safeAccount2.address,
     entryPointAddress: entryPoint07Address,
     key: encodeValidatorNonce({
@@ -387,12 +432,14 @@ export default async function main({ chains }: { chains: Chain[] }) {
     message: { raw: userOpHashToSign2 },
   });
 
-  userOperation.signature = encodeSmartSessionSignature(sessionDetails2);
+  userOperation2.signature = encodeSmartSessionSignature(sessionDetails2);
 
   const userOpHash2 =
-    await smartAccountClient.sendUserOperation(userOperation2);
+    await smartAccountClient2.sendUserOperation(userOperation2);
 
-  const receipt2 = await pimlicoClient1.waitForUserOperationReceipt({
+  console.log(userOpHash2);
+
+  const receipt2 = await pimlicoClient2.waitForUserOperationReceipt({
     hash: userOpHash2,
   });
 
