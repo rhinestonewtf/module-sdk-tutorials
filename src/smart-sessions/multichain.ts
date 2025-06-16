@@ -350,11 +350,7 @@ export default async function main({ chains }: { chains: Chain[] }) {
   console.log(sessionDetails2.permissionEnableHash);
 
   sessionDetails2.enableSessionData.enableSession.permissionEnableSig =
-    await owner.signMessage({
-      message: {
-        raw: sessionDetails2.permissionEnableHash,
-      },
-    });
+    sessionDetails.enableSessionData.enableSession.permissionEnableSig;
 
   const nonce2 = await getAccountNonce(publicClient1, {
     address: safeAccount2.address,
