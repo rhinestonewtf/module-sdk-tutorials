@@ -25,14 +25,15 @@ import omniAccountSameChain from "../src/orchestrator-sdk/same-chain";
 import omniAccountDeployOnFill from "../src/orchestrator-sdk/deploy-on-fill";
 import omniAccountMainnet from "../src/orchestrator-sdk/mainnet";
 import omniAccountSmartSessions from "../src/orchestrator-sdk/smart-sessions";
+import multichainSmartSessions from "../src/smart-sessions/multichain";
 
 import * as dotenv from "dotenv";
 import { Hex } from "viem";
 dotenv.config();
 
-const bundlerUrl = "http://localhost:4337";
-const rpcUrl = "http://localhost:8545";
-const paymasterUrl = "http://localhost:3000";
+// const bundlerUrl = "http://localhost:4337";
+// const rpcUrl = "http://localhost:8545";
+// const paymasterUrl = "http://localhost:3000";
 
 // @ts-ignore
 BigInt.prototype.toJSON = function () {
@@ -51,9 +52,9 @@ describe("Test erc7579 reference implementation", () => {
 
   // it("should test smart sessions with permissionless", async () => {
   //   const receipt = await smartSessionsPermissionlessSafe({
-  //     bundlerUrl,
-  //     rpcUrl,
-  //     paymasterUrl,
+  //     bundlerUrl: `https://api.pimlico.io/v2/11155111/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
+  //     rpcUrl: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  //     paymasterUrl: `https://api.pimlico.io/v2/11155111/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
   //     chain: sepolia,
   //   });
   //   expect(receipt.success).toBe(true);
@@ -215,16 +216,21 @@ describe("Test erc7579 reference implementation", () => {
   //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
   //   });
   //   console.log(bundleStatus);
-  // }, 200000);
 
-  it("should test omni account with smart sessions", async () => {
-    const bundleStatus = await omniAccountSmartSessions({
-      sourceChain: baseSepolia,
-      targetChain: optimismSepolia,
-      orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
-      pimlicoApiKey: process.env.PIMLICO_API_KEY!,
-      fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  // it("should test omni account with smart sessions", async () => {
+  //   const bundleStatus = await omniAccountSmartSessions({
+  //     sourceChain: baseSepolia,
+  //     targetChain: optimismSepolia,
+  //     orchestratorApiKey: process.env.ORCHESTRATOR_API_KEY!,
+  //     pimlicoApiKey: process.env.PIMLICO_API_KEY!,
+  //     fundingPrivateKey: process.env.FUNDING_PRIVATE_KEY! as Hex,
+  //   });
+  //   console.log(bundleStatus);
+  // }, 200000);
+  it("should test smart sessions with permissionless on multiple chains", async () => {
+    const receipt = await multichainSmartSessions({
+      chains: [sepolia, baseSepolia],
     });
-    console.log(bundleStatus);
-  }, 200000);
+    expect(receipt.success).toBe(true);
+  }, 40000);
 });

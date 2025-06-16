@@ -18,8 +18,8 @@ importers:
         specifier: ^0.0.3
         version: 0.0.3(viem@2.28.3(typescript@5.6.2))
       '@rhinestone/module-sdk':
-        specifier: ^0.2.8
-        version: 0.2.8(viem@2.28.3(typescript@5.6.2))
+        specifier: ^0.2.9
+        version: 0.2.9(viem@2.28.3(typescript@5.6.2))
       '@rhinestone/sdk':
         specifier: ^0.5.4
         version: 0.5.4(viem@2.28.3(typescript@5.6.2))
@@ -412,12 +412,20 @@ packages:
     resolution: {integrity: sha512-vnI7V6lFNe0tLAuJMu+2sX+FcL14TaCWy1qiczg1VwRmPrpQCdq5ESXQMqUc2tluRNf6irBXrWbl1mGN8uaU/g==}
     engines: {node: ^14.21.3 || >=16}
 
+  '@noble/curves@1.9.2':
+    resolution: {integrity: sha512-HxngEd2XUcg9xi20JkwlLCtYwfoFw4JGkuZpT+WlsPD4gB/cxkvTD8fSsoAnphGZhFdZYKeQIPCuFlWPm1uE0g==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/hashes@1.5.0':
     resolution: {integrity: sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==}
     engines: {node: ^14.21.3 || >=16}
 
   '@noble/hashes@1.7.2':
     resolution: {integrity: sha512-biZ0NUSxyjLLqo6KxEJ1b+C2NAx0wtDoFvCaXHGgUkeHzf3Xc1xKumFKREuT7f7DARNZ/slvYUwFG6B0f2b6hQ==}
+    engines: {node: ^14.21.3 || >=16}
+
+  '@noble/hashes@1.8.0':
+    resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -437,8 +445,8 @@ packages:
     peerDependencies:
       viem: ^2.17.8
 
-  '@rhinestone/module-sdk@0.2.8':
-    resolution: {integrity: sha512-azCJrJqTEJJgheidxv6vT6tKURXvbQecsRWF4AESjA4UIUlJj3ds3BJMHWCdPjJooDKFgdMQBRveFpzmmveorA==}
+  '@rhinestone/module-sdk@0.2.9':
+    resolution: {integrity: sha512-6C2YruxroNn+51HKI9J5OP/Xy2geIJVf14eu5ViLC68A4uN8mgLMJDFjE6Ror+MGK6V4ON/i+X7RLKH8rz6WbA==}
     peerDependencies:
       viem: ^2.0.0
 
@@ -2299,9 +2307,15 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.7.2
 
+  '@noble/curves@1.9.2':
+    dependencies:
+      '@noble/hashes': 1.8.0
+
   '@noble/hashes@1.5.0': {}
 
   '@noble/hashes@1.7.2': {}
+
+  '@noble/hashes@1.8.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -2319,7 +2333,7 @@ snapshots:
     dependencies:
       viem: 2.28.3(typescript@5.6.2)
 
-  '@rhinestone/module-sdk@0.2.8(viem@2.28.3(typescript@5.6.2))':
+  '@rhinestone/module-sdk@0.2.9(viem@2.28.3(typescript@5.6.2))':
     dependencies:
       solady: 0.0.235
       tslib: 2.8.1
@@ -3819,8 +3833,8 @@ snapshots:
 
   webauthn-p256@0.0.10:
     dependencies:
-      '@noble/curves': 1.6.0
-      '@noble/hashes': 1.5.0
+      '@noble/curves': 1.9.2
+      '@noble/hashes': 1.8.0
 
   which@2.0.2:
     dependencies:

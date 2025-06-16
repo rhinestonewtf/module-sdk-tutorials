@@ -3,17 +3,17 @@ import {
   OWNABLE_VALIDATOR_ADDRESS,
   getSudoPolicy,
   Session,
+  getClient,
   getAccount,
   encodeSmartSessionSignature,
   getOwnableValidatorMockSignature,
   RHINESTONE_ATTESTER_ADDRESS,
   MOCK_ATTESTER_ADDRESS,
+  getTrustAttestersAction,
   encodeValidatorNonce,
   getOwnableValidator,
   encodeValidationData,
   getEnableSessionDetails,
-  SmartSessionMode,
-  getPermissionId,
 } from "@rhinestone/module-sdk";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
@@ -24,8 +24,6 @@ import {
   http,
   Chain,
   toBytes,
-  encodeFunctionData,
-  erc20Abi,
 } from "viem";
 import { createSmartAccountClient } from "permissionless";
 import { erc7579Actions } from "permissionless/actions/erc7579";
@@ -85,6 +83,7 @@ export default async function main({
     erc7579LaunchpadAddress: "0x7579011aB74c46090561ea277Ba79D510c6C00ff",
     attesters: [
       RHINESTONE_ATTESTER_ADDRESS, // Rhinestone Attester
+      MOCK_ATTESTER_ADDRESS, // Mock Attester - do not use in production
     ],
     attestersThreshold: 1,
     validators: [
@@ -107,6 +106,14 @@ export default async function main({
     },
   }).extend(erc7579Actions());
 
+  const smartSessions = getSmartSessionsValidator({});
+
+  const opHash = await smartAccountClient.installModule(smartSessions);
+
+  await pimlicoClient.waitForUserOperationReceipt({
+    hash: opHash,
+  });
+
   const sessionOwner = privateKeyToAccount(generatePrivateKey());
 
   const session: Session = {
@@ -123,8 +130,8 @@ export default async function main({
     },
     actions: [
       {
-        actionTarget: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" as Address, // an address as the target of the session execution
-        actionTargetSelector: "0x70a08231" as Hex, // function selector to be used in the execution, in this case no function selector is used
+        actionTarget: "0xa564cB165815937967a7d018B7F34B907B52fcFd" as Address, // an address as the target of the session execution
+        actionTargetSelector: "0x00000000" as Hex, // function selector to be used in the execution, in this case no function selector is used
         actionPolicies: [getSudoPolicy()],
       },
     ],
@@ -132,34 +139,33 @@ export default async function main({
     permitERC4337Paymaster: true,
   };
 
-  const smartSessions = getSmartSessionsValidator({
+  const account = getAccount({
+    address: safeAccount.address,
+    type: "safe",
+  });
+
+  const sessionDetails = await getEnableSessionDetails({
     sessions: [session],
+    account,
+    clients: [publicClient],
   });
 
-  const opHash = await smartAccountClient.installModule(smartSessions);
-
-  await pimlicoClient.waitForUserOperationReceipt({
-    hash: opHash,
-  });
-
-  const sessionDetails = {
-    mode: SmartSessionMode.USE,
-    permissionId: getPermissionId({ session }),
-    signature: getOwnableValidatorMockSignature({
-      threshold: 1,
-    }),
-  };
+  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
+    await owner.signMessage({
+      message: { raw: sessionDetails.permissionEnableHash },
+    });
 
   const nonce = await getAccountNonce(publicClient, {
     address: safeAccount.address,
     entryPointAddress: entryPoint07Address,
     key: encodeValidatorNonce({
-      account: getAccount({
-        address: safeAccount.address,
-        type: "safe",
-      }),
+      account,
       validator: smartSessions,
     }),
+  });
+
+  sessionDetails.signature = getOwnableValidatorMockSignature({
+    threshold: 1,
   });
 
   const userOperation = await smartAccountClient.prepareUserOperation({
@@ -168,11 +174,7 @@ export default async function main({
       {
         to: session.actions[0].actionTarget,
         value: BigInt(0),
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [safeAccount.address],
-        }),
+        data: session.actions[0].actionTargetSelector,
       },
     ],
     nonce,
