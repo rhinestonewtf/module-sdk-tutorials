@@ -1,6 +1,8 @@
 # ModuleSDK tutorials
 
-This repo consists of various tutorials using the [ModuleSDK](https://docs.rhinestone.wtf/module-sdk). Many of them are written up as guides in our docs to provide more information about why certain things are done.
+> **No longer maintained.** This repository is kept for reference. For new projects, use the [Rhinestone SDK](https://docs.rhinestone.dev).
+
+This repo consists of various tutorials using the [ModuleSDK](https://erc7579.com/tooling/module-sdk). Many of them are written up as guides in our docs to provide more information about why certain things are done.
 
 ## Using this repo
 
